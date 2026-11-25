@@ -1,0 +1,3340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>标枪投手</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #0a0e1a;
+  color: #e0e8ff;
+  font-family: "Microsoft YaHei", sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding: 16px;
+  gap: 12px;
+}
+h1 { line-height: 1.1; position: relative; z-index: 101; }
+h1 svg { display: block; width: min(560px, 94vw); height: auto; filter: drop-shadow(0 5px 7px rgba(0,0,0,0.65)); }
+.lt {
+  font-family: "SimHei", "Microsoft YaHei", sans-serif;
+  font-weight: 900;
+  font-size: 116px;
+  letter-spacing: 4px;
+}
+.metal-title {
+  font-family: "SimHei", "Microsoft YaHei", sans-serif;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  background: linear-gradient(180deg, #ffd79a 0%, #ff9420 30%, #ef4b00 62%, #8a1200 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.45);
+}
+canvas {
+  border: 2px solid #333;
+  border-radius: 12px;
+  background: #1a1f2e;
+  cursor: crosshair;
+}
+.stage { position: relative; display: inline-block; }
+#game3d {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent !important;
+  pointer-events: none;
+  z-index: 2;
+}
+#ui {
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent !important;
+  pointer-events: none;
+  z-index: 3;
+}
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10,14,26,0.94);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 100;
+  overflow-y: auto;
+  padding: 24px 0;
+}
+.menu-overlay.hidden { display: none; }
+.menu-overlay h2 { font-size: 22px; margin-bottom: 10px; }
+.menu-btn {
+  width: 220px;
+  padding: 12px;
+  font-size: 16px;
+  background: transparent;
+  border: 2px solid #ff6b6b;
+  color: #ff6b6b;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.menu-btn:hover { background: #ff6b6b; color: #fff; }
+.menu-note { color: #888; font-size: 13px; margin: 6px 0; text-align: center; max-width: 640px; line-height: 1.6; }
+.rules-list { max-width: 560px; text-align: left; list-style: none; }
+.rules-list li { margin: 8px 0; line-height: 1.7; }
+.rules-list strong { color: #ffcc66; }
+.sec-title { color: #ff6b6b; font-size: 16px; font-weight: 700; margin: 14px 0 4px; }
+.scroll-list { max-height: 52vh; overflow-y: auto; padding-right: 10px; }
+.scroll-list::-webkit-scrollbar { width: 6px; }
+.scroll-list::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+/* 皮肤 / 背景 选择 */
+.pick-list { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 780px; }
+.pick-btn {
+  width: 216px;
+  padding: 12px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid #333;
+  border-radius: 10px;
+  color: #e0e8ff;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.pick-btn:hover { transform: translateY(-3px); border-color: #ff6b6b; }
+.pick-btn.active { border-color: #ff6b6b; background: rgba(255,107,107,0.12); }
+.pick-btn .sw { display: block; width: 100%; height: 34px; border-radius: 6px; margin-bottom: 8px; border: 1px solid rgba(255,255,255,0.2); }
+.pick-btn .nm { display: block; font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+.pick-btn .ds { display: block; font-size: 11px; color: #8fa3c8; line-height: 1.55; }
+.pick-btn .lk { display: block; font-size: 10px; color: #ffcc66; margin-top: 5px; }
+/* 颜色选择 */
+.color-list { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; max-width: 560px; }
+.color-btn {
+  width: 84px; height: 84px; border-radius: 50%;
+  border: 4px solid #333; cursor: pointer;
+  transition: all 0.18s; position: relative;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.7);
+}
+.color-btn:hover { transform: scale(1.08); border-color: #aaa; }
+.color-btn.active { border-color: #ffcc66; box-shadow: 0 0 0 3px rgba(255,204,102,0.4); transform: scale(1.1); }
+</style>
+</head>
+<body>
+<h1>
+<svg viewBox="0 0 720 205" role="img" aria-label="标枪投手" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- 橙→深红 金属渐变 -->
+    <linearGradient id="gHot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffe7bf"/>
+      <stop offset="0.16" stop-color="#ffb14a"/>
+      <stop offset="0.38" stop-color="#ff7a12"/>
+      <stop offset="0.46" stop-color="#ffd9a0"/>
+      <stop offset="0.56" stop-color="#f04d0a"/>
+      <stop offset="0.78" stop-color="#b3210b"/>
+      <stop offset="1" stop-color="#6e0d04"/>
+    </linearGradient>
+    <linearGradient id="gSpear" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#b3210b"/>
+      <stop offset="0.5" stop-color="#ff7a12"/>
+      <stop offset="1" stop-color="#ffe7bf"/>
+    </linearGradient>
+    <!-- 文字裁剪：裂纹/高光只画在字内 -->
+    <clipPath id="cTxt">
+      <text class="lt" x="14" y="152">标枪投手</text>
+    </clipPath>
+    <!-- 遮罩：只抹“手”字竖钩底部+钩（撇不受影响），由标枪接续 -->
+    <mask id="mHook">
+      <rect x="0" y="0" width="720" height="205" fill="#fff"/>
+      <rect x="404" y="156" width="48" height="26" fill="#000"/>
+    </mask>
+  </defs>
+
+  <g mask="url(#mHook)">
+    <!-- 主字：金属硬边 -->
+    <text class="lt" x="14" y="152" fill="url(#gHot)" stroke="#4d0f05" stroke-width="4" paint-order="stroke">标枪投手</text>
+    <!-- 裂纹（只在字体内） -->
+    <g clip-path="url(#cTxt)" fill="none" stroke-linecap="round">
+      <path d="M60 34 L78 62 L64 78 L86 108 L74 138" stroke="#591206" stroke-width="3.6" opacity="0.9"/>
+      <path d="M78 62 L104 70" stroke="#591206" stroke-width="2.4" opacity="0.75"/>
+      <path d="M212 40 L232 66 L214 88 L240 118" stroke="#591206" stroke-width="3.6" opacity="0.85"/>
+      <path d="M232 66 L258 58" stroke="#591206" stroke-width="2.4" opacity="0.7"/>
+      <path d="M344 26 L366 58 L350 76 L378 112 L366 146" stroke="#591206" stroke-width="3.8" opacity="0.9"/>
+      <path d="M366 58 L392 68 L386 92" stroke="#591206" stroke-width="2.4" opacity="0.75"/>
+      <path d="M424 44 L446 70 L428 92 L452 126 L440 150" stroke="#591206" stroke-width="3.6" opacity="0.85"/>
+      <path d="M446 70 L474 62" stroke="#591206" stroke-width="2.4" opacity="0.7"/>
+      <path d="M40 112 L128 104 L214 116 L306 102" stroke="#591206" stroke-width="2.4" opacity="0.65"/>
+      <path d="M286 138 L372 130 L466 142 L546 132" stroke="#591206" stroke-width="2.6" opacity="0.65"/>
+      <!-- 裂纹边缘高光 -->
+      <path d="M61 34 L79 62 L65 78" stroke="#ffd9a0" stroke-width="1" opacity="0.5"/>
+      <path d="M345 26 L367 58 L351 76" stroke="#ffd9a0" stroke-width="1" opacity="0.5"/>
+      <path d="M425 44 L447 70 L429 92" stroke="#ffd9a0" stroke-width="1.2" opacity="0.55"/>
+      <path d="M213 40 L233 66 L215 88" stroke="#ffd9a0" stroke-width="1.2" opacity="0.55"/>
+    </g>
+    <!-- 金属横向高光带 -->
+    <g clip-path="url(#cTxt)">
+      <rect x="0" y="58" width="720" height="7" fill="#fff" opacity="0.22"/>
+      <rect x="0" y="96" width="720" height="4" fill="#fff" opacity="0.16"/>
+      <rect x="0" y="146" width="720" height="5" fill="#3d0a02" opacity="0.35"/>
+    </g>
+  </g>
+
+  <!-- “手”末笔变形：飞出的标枪（从竖钩断口接出） -->
+  <g id="titleSpear">
+    <!-- 速度线（拖在枪尾后方） -->
+    <path d="M344 196 L424 170" stroke="#b3210b" stroke-width="3" opacity="0.5" stroke-linecap="round"/>
+    <path d="M368 180 L436 158" stroke="#ff7a12" stroke-width="3.4" opacity="0.62" stroke-linecap="round"/>
+    <!-- 枪杆：起于竖钩断口，贴底掠出字外再上扬 -->
+    <path d="M434 158 Q478 158 508 146 L650 86" stroke="url(#gSpear)" stroke-width="9" stroke-linecap="round" fill="none"/>
+    <path d="M436 154 Q478 154 508 142 L650 82" stroke="#fff" stroke-width="2" opacity="0.4" stroke-linecap="round" fill="none"/>
+    <!-- 枪尖 -->
+    <polygon points="684,71 650,90 644,71" fill="url(#gSpear)" stroke="#4d0f05" stroke-width="2.5" stroke-linejoin="round"/>
+    <path d="M650 86 L678 73" stroke="#ffe7bf" stroke-width="2" opacity="0.85"/>
+    <!-- 尾羽（落在被抹掉的钩部空间内） -->
+    <polygon points="434,158 410,148 416,176" fill="#ff7a12" stroke="#4d0f05" stroke-width="2.5" stroke-linejoin="round"/>
+    <polygon points="430,164 410,182 436,180" fill="#b3210b" stroke="#4d0f05" stroke-width="2.5" stroke-linejoin="round"/>
+    <!-- 与笔画断口衔接的金属亮痕 -->
+    <path d="M428 162 L448 156" stroke="#ffe7bf" stroke-width="3.5" opacity="0.9" stroke-linecap="round"/>
+  </g>
+</svg>
+</h1>
+<div class="stage">
+<canvas id="game" width="960" height="640"></canvas>
+<canvas id="game3d" width="960" height="640"></canvas>
+<canvas id="ui" width="960" height="640"></canvas>
+</div>
+
+<!-- 主菜单 -->
+<div class="menu-overlay" id="menuMain">
+  <p class="menu-note" id="mainDiffNote">5 玩家阵营 + 3 中立阵营混战 · 最后存活或占领全部中立者获胜</p>
+  <button class="menu-btn" onclick="showScreen('color')">开始游戏</button>
+  <button class="menu-btn" onclick="showScreen('skins')">皮肤</button>
+  <button class="menu-btn" onclick="showScreen('bg')">背景</button>
+  <button class="menu-btn" onclick="showScreen('help')">操作说明</button>
+  <button class="menu-btn" onclick="showScreen('rules')">规则说明</button>
+  <button class="menu-btn" onclick="showScreen('items')">道具库</button>
+</div>
+
+<!-- 选择颜色（开局前） -->
+<div class="menu-overlay hidden" id="menuColor">
+  <h2>选择你的颜色</h2>
+  <p class="menu-note">选择你的弓台颜色，其余 4 个 AI 阵营将自动分配其他颜色。</p>
+  <div class="color-list" id="colorList"></div>
+  <button class="menu-btn" id="btnColorStart" onclick="showScreen('diff')">下一步 · 选择难度</button>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<!-- 皮肤 -->
+<div class="menu-overlay hidden" id="menuSkins">
+  <h2>标枪皮肤</h2>
+  <p class="menu-note">皮肤只改变外观特效（蓄力 / 拖尾 / 命中），<b>不影响伤害与射程数值</b>；蓄力满会有高亮闪烁提示。</p>
+  <div class="pick-list" id="skinList"></div>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<!-- 背景 -->
+<div class="menu-overlay hidden" id="menuBg">
+  <h2>版图背景</h2>
+  <p class="menu-note">版图只更换颜色、纹理、轨道环与边缘装饰，<b>不改玩法数值</b>；选择版图会自动同步配套皮肤。</p>
+  <div class="pick-list" id="themeList"></div>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<!-- 难度选择（绑定两套 AI 反应参数） -->
+<div class="menu-overlay hidden" id="menuDiff">
+  <h2>难度选择</h2>
+  <p class="menu-note">难度只改变 <b>AI 的反应参数（是否秒蹲 / 蹲下节奏与速度）</b>，伤害、血量、玩家判定补偿两档一致。</p>
+  <div class="pick-list" id="diffList"></div>
+  <button class="menu-btn" onclick="startGameWithColor()">开始对战</button>
+  <button class="menu-btn" onclick="showScreen('color')">返回（改颜色）</button>
+</div>
+
+<!-- 操作说明 -->
+<div class="menu-overlay hidden" id="menuHelp">
+  <h2>操作说明</h2>
+  <div class="rules-list scroll-list">
+    <p class="sec-title">【模式简介】</p>
+    <ul class="rules-list">
+      <li>5 个玩家阵营 + 3 个中立阵营混战，中立阵营被击败后可被占领。最后存活的玩家或占领全部中立阵营者获胜。</li>
+    </ul>
+    <p class="sec-title">【操作方式】</p>
+    <ul class="rules-list">
+      <li><strong>WASD / 方向键：</strong>移动</li>
+      <li><strong>按住鼠标左键 / 空格：</strong>蓄力</li>
+      <li><strong>松开鼠标左键 / 空格：</strong>投掷标枪</li>
+      <li>蓄力越久，射程越远、伤害越高</li>
+      <li>蓄力时移速降低，被击中可能打断蓄力</li>
+      <li><strong>Q 键：</strong>切换蹲下 / 起立（蹲下时小人模型高度缩至约 65%、第一人称视线与相机高度同步降低，受击碰撞范围也变小）</li>
+    </ul>
+    <p class="sec-title">【玩法提示】</p>
+    <ul class="rules-list">
+      <li>标枪有飞行时间，注意预判对手走位</li>
+      <li>中立阵营会反击，不要贸然进攻</li>
+      <li>占领中立阵营后可获得其单位支援</li>
+    </ul>
+  </div>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<!-- 规则说明 -->
+<div class="menu-overlay hidden" id="menuRules">
+  <h2>规则说明</h2>
+  <div class="rules-list scroll-list">
+    <ul class="rules-list">
+      <li><strong>阵营：</strong>5 个玩家阵营（含你，红色方）+ 3 个中立阵营（灰白色）</li>
+      <li><strong>中立阵营：</strong>平时驻守中央区域不主动攻击；一旦被打就会反击并追击仇敌</li>
+      <li><strong>占领：</strong>中立阵营血量归零后留下废墟，任何玩家在其附近停留即可占领；占领方获得 1 个环绕支援单位（自动射击）</li>
+      <li><strong>占领机制：</strong>占领无主（中立废墟）阵营立即恢复 25% 最大生命</li>
+      <li><strong>回血道具：</strong>每 10 秒在地图随机位置同时掉落 3 个黄色电池（闪电标志）；任何角色触碰立即回复 25% 最大生命，道具消失（一次性）</li>
+      <li><strong>AI 拾取：</strong>除你之外的 AI 阵营也会主动拾取回血电池，同样恢复 25% 血量</li>
+      <li><strong>胜利条件：</strong>最后存活的玩家获胜；或你率先占领全部 3 个中立阵营立即获胜</li>
+      <li><strong>血量：</strong>玩家弓台 100，中立弓台 120，耗尽则出局 / 被占领</li>
+      <li><strong>蓄力：</strong>满蓄力伤害约 3 倍、速度更快射程更远；但移速减半且可能被打断</li>
+      <li><strong>AI：</strong>敌方会游走、索敌、蓄力射击；中立阵营被激怒后同样凶猛。<strong>难度</strong>在开局流程“开始游戏 → 选颜色 → 选择难度 → 开始对战”中切换：<b>简单</b>（AI 反应 0.3~0.5 秒、蹲下有冷却且几乎不动）/ <b>中等</b>（AI 一被瞄准立刻蹲下）</li>
+    </ul>
+  </div>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<!-- 道具库 -->
+<div class="menu-overlay hidden" id="menuItems">
+  <h2>道具库</h2>
+  <p class="menu-note">道具库以后再设置，敬请期待！</p>
+  <div class="rules-list scroll-list">
+    <ul class="rules-list">
+      <li><strong>回血电池：</strong>黄色亮边 + 闪电图标，拾取立即恢复 25% 最大生命（一次性）</li>
+      <li><strong>大力丸：</strong>黑色哑光金属球 + 金色丹纹，与回血电池同时随机掉落；任何角色（含 AI）触碰拾取，5 秒内的下一次标枪伤害翻倍（一次性）</li>
+    </ul>
+  </div>
+  <button class="menu-btn" onclick="showScreen('main')">返回</button>
+</div>
+
+<script src="three.min.js"></script>
+<script>
+'use strict';
+
+var canvas = document.getElementById('game');
+var ctx = canvas.getContext('2d');
+var W = canvas.width;
+var H = canvas.height;
+// 顶层UI画布：血条/字母/蓄力条/飘字/HUD/结算/画中画边框（置于3D层之上，与WebGL无关）
+var uiCanvas = document.getElementById('ui');
+var uictx = uiCanvas.getContext('2d');
+// 右上角画中画矩形（UI顶左坐标）
+var PIP = { x: W - 238, y: 10, w: 228, h: 152 };
+
+/* ============ 配置 ============ */
+var CFG = {
+  towerR: 25,
+  moveSpeed: 160,
+  chargeMoveMult: 0.5,      // 蓄力时移速降低
+  spearSpeed: 350,
+  spearBaseDmg: 8,
+  spearLife: 4,
+  maxChargeTime: 1.5,
+  chargeDmgBonus: 25,
+  chargeSpdBonus: 200,
+  playerHp: 100,
+  neutralHp: 120,
+  playerCount: 5,
+  neutralCount: 3,
+  captureTime: 1.8,         // 占领所需时间
+  captureRadius: 52,
+  healEvery: 10,            // 回血道具掉落间隔（秒），每次同时掉落 3 个
+  healRatio: 0.25,          // 占领/拾取回血比例（最大生命值25%）
+  pickupR: 22,              // 道具拾取判定半径
+  interruptChance: 0.6,     // 被击中打断蓄力概率
+  aiShootMin: 1.4,
+  aiShootMax: 3.2,
+  aiMoveMin: 0.8,
+  aiMoveMax: 2.0,
+  maxParticles: 260,        // 粒子上限，防卡顿
+  maxRings: 30,
+  maxSpots: 40
+};
+
+var FACTION_DEFS = [
+  { color: '#ff4444', name: '赤焰', letter: 'R' },
+  { color: '#4488ff', name: '碧蓝', letter: 'B' },
+  { color: '#44dd66', name: '翠绿', letter: 'G' },
+  { color: '#ffcc22', name: '金阳', letter: 'Y' },
+  { color: '#cc66ff', name: '紫电', letter: 'P' }
+];
+var NEUTRAL_DEFS = [
+  { color: '#9aa4b2', name: '中立·甲', letter: '甲' },
+  { color: '#8b96a5', name: '中立·乙', letter: '乙' },
+  { color: '#7d8896', name: '中立·丙', letter: '丙' }
+];
+
+/* ============ 颜色池（玩家开局前自选，AI 自动分配其余颜色） ============ */
+var COLOR_POOL = [
+  { color: '#ff4444', name: '赤焰' },
+  { color: '#4488ff', name: '碧蓝' },
+  { color: '#44dd66', name: '翠绿' },
+  { color: '#ffcc22', name: '金阳' },
+  { color: '#cc66ff', name: '紫电' },
+  { color: '#ff8844', name: '橙辉' },
+  { color: '#44eeee', name: '青岚' },
+  { color: '#ff66cc', name: '樱粉' }
+];
+var AI_LETTERS = ['壹', '贰', '叁', '肆'];
+var playerColorIdx = 0;   // 玩家当前选择的颜色索引
+
+/* ============ 皮肤资源表（只换外观，不影响数值） ============ */
+var SPEAR_SKINS = [
+  { id: 'mofeng', name: '墨锋', icon: '⚫',
+    body: '#141414', tip: '#8a7a5a', glow: 'rgba(90,74,51,0.9)',
+    trail: 'rgba(43,33,24,0.85)', fx: '#2b2118',
+    chargeFx: 'ink', throwFx: 'ink', hitFx: 'ink',
+    desc: '通体漆黑，枪尖泛墨光，枪杆缠细墨纹。蓄力渗墨气，命中溅墨点' },
+  { id: 'frost', name: '霜刺', icon: '❄️',
+    body: '#bfe3f5', tip: '#ffffff', glow: 'rgba(120,200,255,0.9)',
+    trail: 'rgba(191,227,245,0.9)', fx: '#bfe3f5',
+    chargeFx: 'frost', throwFx: 'ice', hitFx: 'frost',
+    desc: '冰蓝半透明，枪身像冰棱。蓄力结霜，命中留霜印' },
+  { id: 'leiya', name: '雷牙', icon: '⚡',
+    body: '#fde68a', tip: '#ffffff', glow: 'rgba(245,158,11,0.95)',
+    trail: 'rgba(253,230,138,0.95)', fx: '#f59e0b',
+    chargeFx: 'electric', throwFx: 'lightning', hitFx: 'spark',
+    desc: '金白色，枪尖有电火花，枪杆螺旋纹。电光爬升，满蓄力闪白光' },
+  { id: 'chiyu', name: '赤羽', icon: '🔥',
+    body: '#7f1d1d', tip: '#fca5a5', glow: 'rgba(239,68,68,0.95)',
+    trail: 'rgba(239,68,68,0.9)', fx: '#ef4444',
+    chargeFx: 'ember', throwFx: 'flame', hitFx: 'fire',
+    desc: '深红色，枪尾绑火红羽翎，枪尖像鸟喙。拖火焰尾迹，命中爆火星' },
+  { id: 'qingteng', name: '青藤', icon: '🌿',
+    body: '#2f6b35', tip: '#a3e635', glow: 'rgba(101,163,13,0.95)',
+    trail: 'rgba(47,107,53,0.85)', fx: '#65a30d',
+    chargeFx: 'vine', throwFx: 'leaf', hitFx: 'sprout',
+    desc: '翠绿色，枪身缠藤蔓，枪尖嫩芽状。飘绿叶碎屑，命中长小芽' }
+];
+
+/* ============ 版图主题资源表（与皮肤呼应） ============ */
+var BOARD_THEMES = [
+  { id: 'mochi', name: '墨池', skin: 'mofeng',
+    bg: '#f5f1e6', bg2: '#e7dfc9', ring: '#4a3b2a', ringStyle: 'ink',
+    center: '#efe7d4', centerGlow: 'rgba(74,59,42,0.20)', centerStyle: 'inkpool',
+    edge: '#4a3b2a', edgeStyle: 'feibai',
+    desc: '米白宣纸底，中央墨晕，环形墨线轨道，边缘飞白' },
+  { id: 'hantan', name: '寒潭', skin: 'frost',
+    bg: '#dcebf5', bg2: '#c2d8ea', ring: '#ffffff', ringStyle: 'frost',
+    center: '#e8f3fb', centerGlow: 'rgba(91,167,221,0.22)', centerStyle: 'crack',
+    edge: '#9cc3e8', edgeStyle: 'fog',
+    desc: '浅蓝冰面，中央冰裂纹，霜白圆环轨道，枯枝薄雾' },
+  { id: 'leitai', name: '雷台', skin: 'leiya',
+    bg: '#3a3f47', bg2: '#2a2e35', ring: '#d4af37', ringStyle: 'gold',
+    center: '#4a4038', centerGlow: 'rgba(212,175,55,0.25)', centerStyle: 'copper',
+    edge: '#d4af37', edgeStyle: 'arc',
+    desc: '深灰石台，中央铜纹圆盘，金色刻痕轨道，细小电弧；满蓄力铜纹亮' },
+  { id: 'chiyuan', name: '赤原', skin: 'chiyu',
+    bg: '#e9d6c9', bg2: '#dac2b0', ring: '#3a2320', ringStyle: 'charcoal',
+    center: '#e0b8a4', centerGlow: 'rgba(239,68,68,0.25)', centerStyle: 'ember',
+    edge: '#7c2d1a', edgeStyle: 'emberD',
+    desc: '赭红土地，中央火盆余烬，焦黑圆环轨道，边缘飘火星灰烬' },
+  { id: 'qingpu', name: '青圃', skin: 'qingteng',
+    bg: '#dcead9', bg2: '#c7dec0', ring: '#3f7a44', ringStyle: 'vine',
+    center: '#cfe3c8', centerGlow: 'rgba(101,163,13,0.22)', centerStyle: 'moss',
+    edge: '#1f4d28', edgeStyle: 'flower',
+    desc: '翠绿草地，中央青苔石台，藤蔓缠绕圆环，边缘有小花' }
+];
+
+/* ============ 状态 ============ */
+var started = false;
+var factions = [];
+var spears = [];
+var particles = [];
+var rings = [];
+var spots = [];
+var healItems = [];         // 场上回血道具（2D权威数据，3D层做镜像）
+var healDropT = 0;          // 掉落计时（每 CFG.healEvery 秒一个）
+var healUid = 0;            // 道具唯一id（3D镜像增删同步用）
+var powerItems = [];        // 场上大力丸（2D权威数据，3D层做镜像）
+var powerUid = 0;           // 大力丸唯一id（3D镜像增删同步用）
+var POWER_BUFF_T = 5;       // 拾取后伤害翻倍Buff的有效时间（秒）
+var floaters = [];
+var themeDeco = [];
+var gameOver = false;
+var winReason = '';        // capture / last / dead / draw
+var winner = null;
+var nowT = 0;
+
+var curSkin = 0;           // 当前皮肤索引
+var curTheme = 0;          // 当前版图索引
+var curSkinObj = SPEAR_SKINS[0];
+
+/* 输入 */
+var keys = {};
+// 强制清空所有按键按下标记：死亡结算/新开局时调用，避免上一局按住的移动键在新局自动走路
+function resetKeys() {
+  for (var k in keys) {
+    if (Object.prototype.hasOwnProperty.call(keys, k)) keys[k] = false;
+  }
+  keys = {};
+  isCharging = false;
+  chargeTime = 0;
+}
+var mouseX = W / 2, mouseY = H / 2;
+var isCharging = false;
+var chargeTime = 0;
+var isCrouch = false;        // Q键切换蹲下/起立：模型高度、视线高度、受击体积同步变化
+var CROUCH_SCALE = 0.65;     // 蹲下高度比例（原高的 60%~70%）
+/* —— 难度：两套 AI 反应参数（难度选择界面绑定）——
+   简单 = 反应延迟 0.3~0.5s + 蹲下有上限/冷却 + 蹲下极慢（当前手感，AI 笨）
+   中等 = 威胁出现立刻蹲、无上限无冷却 + 蹲下常规速度（原“一瞄就蹲”硬核手感） */
+var DIFF_PRESETS = {
+  easy: {
+    key: 'easy', name: '简单',
+    reactMin: 0.3, reactMax: 0.5,      // 反应延迟（秒）
+    hold: 1.2,                          // 连续蹲下上限（秒）
+    cdMin: 1.2, cdMax: 2.2,             // 起身后冷却（秒）
+    crouchSpd: 0.12,                    // AI 蹲下移动倍率（极慢）
+    nCrouchSpd: 0.12                    // 中立阵营蹲下移动倍率
+  },
+  normal: {
+    key: 'normal', name: '中等',
+    reactMin: 0, reactMax: 0,           // 无反应延迟 → 一瞄就蹲
+    hold: 1e9,                          // 无连续蹲上限（威胁在就一直蹲）
+    cdMin: 0, cdMax: 0,                 // 无冷却
+    crouchSpd: 0.75,                    // 原版蹲下潜行速度
+    nCrouchSpd: 1                       // 原版中立蹲下不减速
+  }
+};
+var diffKey = 'easy';                   // 当前难度（默认简单）
+function DIFF() { return DIFF_PRESETS[diffKey] || DIFF_PRESETS.easy; }
+/* —— 玩家标枪命中宽容（吸附/判定补偿，保证瞄了就能打中；两套难度通用）—— */
+var PLAYER_HIT_BONUS = 5;                    // 玩家标枪命中半径加成（px）
+var PLAYER_HIT_CROUCH = 0.8;                 // 打蹲下目标时的身位比例（不再按 0.65 全额缩小）
+var MAGNET_R = 80;                           // 磁吸启动距离（px）
+var MAGNET_K = 6;                            // 磁吸强度（每秒向目标偏转的比例）
+/* 第一人称状态（默认FP，F键切换俯视；指哪打哪：准星射线→地面→2D瞄准角） */
+var fpMode = true;
+var fpYaw = 0, fpPitch = -0.1;
+var FP_PITCH_MAX = 1.3962634;   // 抬头极限 +80°（弧度，防止视角翻转/穿地）
+var FP_PITCH_MIN = -1.3962634;  // 低头极限 -80°
+var fpInit = false;          // 进入FP时用当前瞄准角同步一次yaw
+var FP_EYE = 66;             // 眼高（小人全高80）
+var fpThrowT = 0;            // FP甩枪动画剩余时间（kickThrow3D触发）
+
+/* ============ 工具 ============ */
+function jr(a, b) { return a + Math.random() * (b - a); }
+function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+function byId(id) {
+  for (var i = 0; i < factions.length; i++) { if (factions[i].id === id) return factions[i]; }
+  return null;
+}
+function skinById(id) {
+  if (typeof id === 'number') return SPEAR_SKINS[id] || SPEAR_SKINS[0];
+  for (var i = 0; i < SPEAR_SKINS.length; i++) { if (SPEAR_SKINS[i].id === id) return SPEAR_SKINS[i]; }
+  return SPEAR_SKINS[0];
+}
+function skinIndexById(id) {
+  for (var i = 0; i < SPEAR_SKINS.length; i++) { if (SPEAR_SKINS[i].id === id) return i; }
+  return -1;
+}
+function addP(x, y, color, life, vx, vy, size, kind, h, vh) {
+  if (particles.length >= CFG.maxParticles) return;
+  // h/vh = 3D世界高度与竖直速度（2D绘制忽略；不传默认贴地8）
+  particles.push({ x: x, y: y, color: color, life: life, max: life, vx: vx, vy: vy, size: size, kind: kind || 'dot',
+    h: (h === undefined ? 8 : h), vh: (vh === undefined ? 0 : vh) });
+}
+function addRing(x, y, maxR, color) {
+  if (rings.length >= CFG.maxRings) return;
+  rings.push({ x: x, y: y, r: 6, maxR: maxR, life: 0.35, max: 0.35, color: color });
+}
+function spawnSpot(x, y, kind, color) {
+  if (spots.length >= CFG.maxSpots) return;
+  var life = (kind === 'sprout') ? 0.9 : 0.55;
+  spots.push({ x: x, y: y, kind: kind, color: color, life: life, max: life });
+}
+function addFloater(x, y, text, color) {
+  floaters.push({ x: x, y: y, text: text, color: color, life: 1.0, max: 1.0 });
+}
+
+/* ============ 屏幕切换 ============ */
+function showScreen(name) {
+  var ids = ['menuMain', 'menuSkins', 'menuBg', 'menuHelp', 'menuRules', 'menuItems', 'menuColor', 'menuDiff'];
+  for (var i = 0; i < ids.length; i++) {
+    document.getElementById(ids[i]).classList.add('hidden');
+  }
+  if (name === 'main') {
+    document.getElementById('menuMain').classList.remove('hidden');
+    var dn = document.getElementById('mainDiffNote');   // 主菜单提示当前难度
+    if (dn) dn.textContent = '5 玩家阵营 + 3 中立阵营混战 · 当前难度：' + DIFF().name +
+      '（开始游戏 → 选颜色 → 选难度 → 进入对局）';
+    started = false;
+    gameOver = false;
+    isCharging = false;
+    chargeTime = 0;
+    resetKeys();   // 回菜单：清空按键，防止遗留按键状态带入下一局
+  } else if (name === 'color') {
+    buildColorMenu();
+    document.getElementById('menuColor').classList.remove('hidden');
+  } else if (name === 'play') {
+    initGame();
+    started = true;
+    gameOver = false;
+    isCharging = false;
+    chargeTime = 0;
+  } else if (name === 'skins') {
+    buildSkinMenu();
+    document.getElementById('menuSkins').classList.remove('hidden');
+  } else if (name === 'diff') {
+    buildDiffMenu();
+    document.getElementById('menuDiff').classList.remove('hidden');
+  } else if (name === 'bg') {
+    buildThemeMenu();
+    document.getElementById('menuBg').classList.remove('hidden');
+  } else if (name === 'help') {
+    document.getElementById('menuHelp').classList.remove('hidden');
+  } else if (name === 'rules') {
+    document.getElementById('menuRules').classList.remove('hidden');
+  } else if (name === 'items') {
+    document.getElementById('menuItems').classList.remove('hidden');
+  }
+}
+
+/* 难度菜单：绑定两套 AI 反应参数（简单=呆 / 中等=一瞄就蹲） */
+function buildDiffMenu() {
+  var wrap = document.getElementById('diffList');
+  wrap.innerHTML = '';
+  var order = ['easy', 'normal'];
+  var desc = {
+    easy: 'AI 反应 0.3~0.5 秒后才蹲下 / 闪避，连续蹲 1.2 秒强制起身且有冷却，蹲下几乎挪不动 —— 容错高，适合练手。',
+    normal: 'AI 一被瞄准立刻蹲下（无反应延迟、无冷却、威胁在就一直蹲），蹲下保持 0.75 倍移速 —— 原硬核手感。'
+  };
+  for (var i = 0; i < order.length; i++) {
+    (function (key) {
+      var d = DIFF_PRESETS[key];
+      var b = document.createElement('button');
+      b.className = 'pick-btn' + (diffKey === key ? ' active' : '');
+      b.innerHTML = '<span class="nm">' + d.name + '</span><span class="ds">' + desc[key] + '</span>';
+      b.onclick = function () { diffKey = key; buildDiffMenu(); };
+      wrap.appendChild(b);
+    })(order[i]);
+  }
+}
+
+/* ============ 选色面板 ============ */
+function buildColorMenu() {
+  var wrap = document.getElementById('colorList');
+  wrap.innerHTML = '';
+  for (var i = 0; i < COLOR_POOL.length; i++) {
+    (function (idx) {
+      var c = COLOR_POOL[idx];
+      var b = document.createElement('button');
+      b.className = 'color-btn' + (idx === playerColorIdx ? ' active' : '');
+      b.style.background = 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), ' + c.color + ' 70%)';
+      b.textContent = c.name;
+      b.title = c.name;
+      b.onclick = function () { playerColorIdx = idx; buildColorMenu(); };
+      wrap.appendChild(b);
+    })(i);
+  }
+}
+function startGameWithColor() {
+  showScreen('play');
+}
+
+/* ============ 皮肤 / 版图 菜单 ============ */
+function buildSkinMenu() {
+  var wrap = document.getElementById('skinList');
+  wrap.innerHTML = '';
+  for (var i = 0; i < SPEAR_SKINS.length; i++) {
+    (function (idx) {
+      var sk = SPEAR_SKINS[idx];
+      var b = document.createElement('button');
+      b.className = 'pick-btn' + (idx === curSkin ? ' active' : '');
+      b.innerHTML = '<span class="sw" style="background:linear-gradient(135deg,' + sk.body + ' 45%,' + sk.tip + ' 55%)"></span>' +
+        '<span class="nm">' + sk.icon + ' ' + sk.name + '</span>' +
+        '<span class="ds">' + sk.desc + '</span>';
+      b.onclick = function () { curSkin = idx; curSkinObj = SPEAR_SKINS[idx]; buildSkinMenu(); };
+      wrap.appendChild(b);
+    })(i);
+  }
+}
+function buildThemeMenu() {
+  var wrap = document.getElementById('themeList');
+  wrap.innerHTML = '';
+  for (var i = 0; i < BOARD_THEMES.length; i++) {
+    (function (idx) {
+      var th = BOARD_THEMES[idx];
+      var b = document.createElement('button');
+      b.className = 'pick-btn' + (idx === curTheme ? ' active' : '');
+      b.innerHTML = '<span class="sw" style="background:linear-gradient(135deg,' + th.bg + ',' + th.bg2 + ')"></span>' +
+        '<span class="nm">' + th.name + '</span>' +
+        '<span class="ds">' + th.desc + '</span>' +
+        '<span class="lk">配套皮肤：' + skinById(th.skin).icon + skinById(th.skin).name + '</span>';
+      b.onclick = function () { selectTheme(idx); buildThemeMenu(); };
+      wrap.appendChild(b);
+    })(i);
+  }
+}
+function selectTheme(i) {
+  curTheme = i;
+  var th = BOARD_THEMES[curTheme];
+  var si = skinIndexById(th.skin);      // 版图与皮肤呼应：自动同步配套皮肤
+  if (si >= 0) { curSkin = si; curSkinObj = SPEAR_SKINS[si]; }
+  buildDeco();
+}
+/* 边缘装饰（静态预生成，限制数量防卡顿） */
+function buildDeco() {
+  themeDeco = [];
+  var th = BOARD_THEMES[curTheme];
+  var n = 20;
+  for (var i = 0; i < n; i++) {
+    var side = i % 4;
+    var x, y;
+    if (side === 0) { x = jr(20, W - 20); y = jr(8, 78); }
+    else if (side === 1) { x = jr(20, W - 20); y = jr(H - 78, H - 8); }
+    else if (side === 2) { x = jr(8, 78); y = jr(20, H - 20); }
+    else { x = jr(W - 78, W - 8); y = jr(20, H - 20); }
+    themeDeco.push({ x: x, y: y, a: jr(0, Math.PI), b: jr(9, 24), s: jr(0.7, 1.3), p: jr(0, 6.28) });
+  }
+}
+
+/* ============ 游戏初始化 ============ */
+function initGame() {
+  factions = [];
+  spears = [];
+  particles = [];
+  rings = [];
+  spots = [];
+  healItems = [];           // 新对局：清空回血道具
+  healDropT = 0;
+  powerItems = [];          // 新对局：清空大力丸
+  floaters = [];
+  fpInit = false;   // 新对局：进入FP时重新由初始瞄准角同步yaw
+  isCrouch = false; // 新对局：恢复站立
+  resetKeys();      // 新对局：清空上一局遗留的按键状态（WASD等），开局静止
+  winner = null;
+  winReason = '';
+  var cx = W / 2, cy = H / 2;
+  var i, angle, f;
+  // 计算 5 个玩家阵营颜色：玩家选的 + 其余给 AI（保证不重复）
+  var pc = [];
+  pc.push(COLOR_POOL[playerColorIdx]);
+  for (var ci = 0; ci < COLOR_POOL.length && pc.length < CFG.playerCount; ci++) {
+    if (ci !== playerColorIdx) pc.push(COLOR_POOL[ci]);
+  }
+  // 5 个玩家阵营：外圈轨道（半径 215）
+  for (i = 0; i < CFG.playerCount; i++) {
+    angle = (i / CFG.playerCount) * Math.PI * 2 - Math.PI / 2;
+    f = {
+      id: i,
+      x: cx + Math.cos(angle) * 215,
+      y: cy + Math.sin(angle) * 215,
+      hp: CFG.playerHp, maxHp: CFG.playerHp,
+      color: pc[i].color, name: pc[i].name,
+      letter: (i === 0) ? '我' : AI_LETTERS[i - 1],
+      alive: true, isPlayer: i === 0, isNeutral: false,
+      homeX: cx + Math.cos(angle) * 215, homeY: cy + Math.sin(angle) * 215,
+      angle: angle + Math.PI,
+      moveTimer: jr(0, CFG.aiMoveMax), shootTimer: jr(0, CFG.aiShootMax),
+      moveAngle: jr(0, Math.PI * 2),
+      charging: false, chargeT: 0, chargeDur: 0,
+      support: 0, supTimer: 1.0,
+      crouch: false, crouchT: 0,                 // AI 蹲下状态（Q键同款身位/受击体积）
+      crouchCD: 0, reactT: 0, reactArmed: false, reactDelay: 0, crouchHold: 0,  // 反应延迟/冷却计时
+      powerT: 0,                                 // 大力丸Buff剩余时间（>0 时下一次标枪伤害翻倍）
+      angry: false, aggroId: -1, angryT: 0,
+      defeated: false, capturedBy: -1, capBy: -1, capProg: 0
+    };
+    factions.push(f);
+  }
+  // 3 个中立阵营：内圈轨道（半径 105）
+  for (i = 0; i < CFG.neutralCount; i++) {
+    angle = (i / CFG.neutralCount) * Math.PI * 2 - Math.PI / 2 + Math.PI / 3;
+    f = {
+      id: CFG.playerCount + i,
+      x: cx + Math.cos(angle) * 105,
+      y: cy + Math.sin(angle) * 105,
+      hp: CFG.neutralHp, maxHp: CFG.neutralHp,
+      color: NEUTRAL_DEFS[i].color, name: NEUTRAL_DEFS[i].name, letter: NEUTRAL_DEFS[i].letter,
+      alive: true, isPlayer: false, isNeutral: true,
+      homeX: cx + Math.cos(angle) * 105, homeY: cy + Math.sin(angle) * 105,
+      angle: angle + Math.PI,
+      moveTimer: 0, shootTimer: 1.5,
+      moveAngle: 0,
+      charging: false, chargeT: 0, chargeDur: 0,
+      support: 0, supTimer: 1.5,
+      crouch: false, crouchT: 0,                 // 中立同样拥有蹲下/起立状态
+      crouchCD: 0, reactT: 0, reactArmed: false, reactDelay: 0, crouchHold: 0,  // 反应延迟/冷却计时
+      powerT: 0,                                 // 大力丸Buff剩余时间（>0 时下一次标枪伤害翻倍）
+      angry: false, aggroId: -1, angryT: 0,
+      defeated: false, capturedBy: -1, capBy: -1, capProg: 0
+    };
+    factions.push(f);
+  }
+}
+
+/* ============ 输入事件 ============ */
+document.addEventListener('keydown', function (e) {
+  keys[e.key] = true;
+  if (e.key.indexOf('Arrow') === 0 || e.key === ' ') e.preventDefault();
+  if (e.key === ' ' && !e.repeat && started && !gameOver) {
+    var p = factions[0];
+    if (p && p.alive && !isCharging) { isCharging = true; chargeTime = 0; }
+  }
+  // F 切换 第一人称/俯视
+  if ((e.key === 'f' || e.key === 'F') && !e.repeat && started && !gameOver && USE3D && r3d) {
+    fpMode = !fpMode;
+    fpInit = false;
+    if (fpMode) {
+      try { canvas.requestPointerLock(); } catch (e2) {}   // 切入FP即锁定视角
+    } else if (document.pointerLockElement) {
+      try { document.exitPointerLock(); } catch (e3) {}
+    }
+  }
+  // Q 切换蹲下/起立（站立→蹲下、蹲下→站立；模型高度与第一人称视线/相机高度同步变化）
+  if ((e.key === 'q' || e.key === 'Q') && !e.repeat && started && !gameOver) {
+    isCrouch = !isCrouch;
+  }
+});
+document.addEventListener('keyup', function (e) {
+  keys[e.key] = false;
+  if (e.key === ' ' && isCharging) {
+    if (started && !gameOver) firePlayerSpear();
+    isCharging = false;
+    chargeTime = 0;
+  }
+});
+/* FP鼠标视角（Pointer Lock 下由 mousemove 调用；单独提出便于验证）
+   上下移动鼠标 → 抬头/低头（pitch）；极限 ±80°，到顶到底停住不翻转 */
+function fpMouseLook(mx, my) {
+  fpYaw -= mx * 0.0026;
+  fpPitch = clamp(fpPitch - my * 0.0026, FP_PITCH_MIN, FP_PITCH_MAX);
+}
+canvas.addEventListener('mousemove', function (e) {
+  // FP：鼠标位移转视角（类FPS）。指针锁定只是防跑出窗口的增强，未锁定同样生效
+  if (fpOn()) {
+    fpMouseLook(e.movementX || 0, e.movementY || 0);
+    return;
+  }
+  if (fpMode) return;   // FP但未开局/已结算：不做绝对定位瞄准
+  var rect = canvas.getBoundingClientRect();
+  mouseX = (e.clientX - rect.left) * (W / rect.width);
+  mouseY = (e.clientY - rect.top) * (H / rect.height);
+});
+canvas.addEventListener('mousedown', function (e) {
+  if (!started || gameOver) return;
+  if (e.button === 0) {
+    var p = factions[0];
+    if (p && p.alive) { isCharging = true; chargeTime = 0; }
+  }
+});
+canvas.addEventListener('mouseup', function (e) {
+  if (!started || gameOver) return;
+  if (e.button === 0 && isCharging) {
+    firePlayerSpear();
+    isCharging = false;
+    chargeTime = 0;
+  }
+});
+canvas.addEventListener('click', function () {
+  if (gameOver) { showScreen('main'); return; }
+  // FP 模式：点击画面锁定指针（Esc 释放）
+  if (fpMode && started && document.pointerLockElement !== canvas) {
+    try { canvas.requestPointerLock(); } catch (e) {}
+  }
+});
+
+/* ============ 射击 ============ */
+function fireSpear(f, angle, ratio) {
+  var speed = CFG.spearSpeed + CFG.chargeSpdBonus * ratio;
+  var dmg = CFG.spearBaseDmg + CFG.chargeDmgBonus * ratio;
+  if (f.powerT > 0) {                  // 大力丸Buff：下一次标枪伤害翻倍（一次性消耗）
+    dmg *= 2;
+    f.powerT = 0;
+  }
+  // 手部起点：优先取3D小人投掷手掌的世界坐标反投影到2D（绝不从身体中心生成）
+  var handW = null, handH = 40, bx, by;
+  var st = (r3d && r3d.figs) ? r3d.figs[f.id] : null;
+  if (st && st.armR && st.grp) {
+    st.grp.updateMatrixWorld(true);
+    handW = new THREE.Vector3(0, -23, 1.5);          // 手掌/C形手在手臂链末端的局部位置
+    st.armR.localToWorld(handW);
+    handH = handW.y;
+    var wp = worldToPx(handW.x, handW.y, handW.z, r3d.cam);
+    if (!wp.behind && wp.x > -20 && wp.x < W + 20 && wp.y > -20 && wp.y < H + 20) { bx = wp.x; by = wp.y; }
+  }
+  if (bx === undefined) {                             // 2D模式/相机背面：按投掷手臂侧偏近似手位
+    bx = f.x + Math.cos(angle) * (CFG.towerR + 8) + Math.cos(angle + Math.PI / 2) * 5;
+    by = f.y + Math.sin(angle) * (CFG.towerR + 8) + Math.sin(angle + Math.PI / 2) * 5;
+    handH = 40;
+  }
+  // 皮肤只作用于玩家射出的标枪；AI / 中立为素色
+  var isPlayerShot = !!f.isPlayer;
+  spears.push({
+    x: bx, y: by, px: bx, py: by, x0: bx, y0: by, handH: handH,
+    vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+    owner: f.id, dmg: dmg, life: CFG.spearLife, maxLife: CFG.spearLife,
+    color: f.color, skinId: isPlayerShot ? SPEAR_SKINS[curSkin].id : null, chargeRatio: ratio,
+    T: CFG.spearLife   // 落点时刻（手部起点→目标落点直线）
+  });
+  kickThrow3D(f.id);   // 3D小人挥臂投掷动画
+  var muzzleN = isPlayerShot ? 8 : 3;
+  var muzzleCol = isPlayerShot ? curSkinObj.fx : f.color;
+  for (var i = 0; i < muzzleN; i++) {
+    addP(bx, by, muzzleCol, jr(0.25, 0.5),
+      Math.cos(angle) * jr(60, 170) + jr(-45, 45),
+      Math.sin(angle) * jr(60, 170) + jr(-45, 45), jr(1.8, 3.8), 'dot', handH, jr(4, 16));
+  }
+}
+function firePlayerSpear() {
+  var p = factions[0];
+  if (!p || !p.alive) return;
+  var ratio = clamp(chargeTime / CFG.maxChargeTime, 0, 1);
+  var angle = Math.atan2(mouseY - p.y, mouseX - p.x);
+  fireSpear(p, angle, ratio);
+}
+
+/* ============ 目标选择 ============ */
+function nearestPlayerFaction(f) {
+  var best = null, bd = Infinity;
+  for (var i = 0; i < factions.length; i++) {
+    var t = factions[i];
+    if (!t.alive || t.isNeutral || t.id === f.id) continue;
+    var d = Math.hypot(t.x - f.x, t.y - f.y);
+    if (d < bd) { bd = d; best = t; }
+  }
+  return best;
+}
+function nearestEnemy(f) {
+  if (f.isNeutral) {
+    if (!f.angry) return null;                    // 中立阵营：不被打不反击
+    var af = byId(f.aggroId);
+    if (af && af.alive) return af;
+    return nearestPlayerFaction(f);
+  }
+  return nearestPlayerFaction(f);                 // AI 玩家：只打玩家，中立是危险障碍
+}
+
+/* ============ 中立阵营 AI ============ */
+function updateNeutral(f, dt) {
+  var threat = aiCrouchThink(f, dt);        // 中立同样会蹲下/闪避（非玩家阵营共用；含反应延迟/冷却）
+  var crouchSpd = f.crouch ? DIFF().nCrouchSpd : 1;   // 蹲下代价（难度相关）
+  var dodged = false;
+  if (threat) {                             // 标枪飞来：垂直枪线侧移躲避
+    var da = dodgeAngle(f, threat);
+    f.x += Math.cos(da) * CFG.moveSpeed * 0.8 * crouchSpd * dt;
+    f.y += Math.sin(da) * CFG.moveSpeed * 0.8 * crouchSpd * dt;
+    dodged = true;
+  }
+  if (f.angry) {
+    f.angryT -= dt;
+    if (f.angryT <= 0) { f.angry = false; f.aggroId = -1; }
+    var target = nearestEnemy(f);
+    if (target) {
+      f.angle = Math.atan2(target.y - f.y, target.x - f.x);
+      if (!dodged) {
+        var d = Math.hypot(target.x - f.x, target.y - f.y);
+        var mv = d > 175 ? 1 : (d < 120 ? -1 : 0);
+        f.x += Math.cos(f.angle) * mv * CFG.moveSpeed * 0.5 * crouchSpd * dt;
+        f.y += Math.sin(f.angle) * mv * CFG.moveSpeed * 0.5 * crouchSpd * dt;
+      }
+      f.shootTimer -= dt;
+      if (f.shootTimer <= 0) {
+        fireSpear(f, f.angle + jr(-0.1, 0.1), 0.45);
+        f.shootTimer = jr(1.5, 2.6);
+      }
+    }
+  } else if (!dodged) {
+    var hd = Math.hypot(f.homeX - f.x, f.homeY - f.y);
+    if (hd > 8) {
+      var ha = Math.atan2(f.homeY - f.y, f.homeX - f.x);
+      f.x += Math.cos(ha) * 45 * crouchSpd * dt;
+      f.y += Math.sin(ha) * 45 * crouchSpd * dt;
+      f.angle = ha;
+    } else {
+      f.angle += dt * 0.5;                        // 驻守巡视
+    }
+  }
+  f.x = clamp(f.x, CFG.towerR, W - CFG.towerR);
+  f.y = clamp(f.y, CFG.towerR, H - CFG.towerR);
+}
+
+/* ============ AI 感知与蹲下（非玩家阵营共用：AI + 中立） ============ */
+function isCrouchF(f) { return f.isPlayer ? !!isCrouch : !!f.crouch; }
+
+// 预测飞来的标枪：0.9s 内直线航迹会擦过身位 → 返回该标枪（null=安全）
+function spearThreat(f) {
+  var best = null, bt = 0.9;
+  for (var i = 0; i < spears.length; i++) {
+    var a = spears[i];
+    if (a.owner === f.id) continue;
+    var v2 = a.vx * a.vx + a.vy * a.vy;
+    if (v2 < 1) continue;
+    var t = ((f.x - a.x) * a.vx + (f.y - a.y) * a.vy) / v2;   // 最近接近时刻
+    if (t < 0 || t > bt) continue;
+    var cx = a.x + a.vx * t, cy = a.y + a.vy * t;
+    var dd = Math.hypot(f.x - cx, f.y - cy);
+    var rr = CFG.towerR * (isCrouchF(f) ? CROUCH_SCALE : 1) + 26;  // 蹲下身位更矮更难被擦到
+    if (dd < rr) { best = a; bt = t; }
+  }
+  return best;
+}
+
+// 敌方正在蓄力且枪口大致指向自己（460px 内、±0.5rad）
+function chargeThreat(f) {
+  for (var i = 0; i < factions.length; i++) {
+    var e = factions[i];
+    if (!e.alive || e.id === f.id || e.isNeutral) continue;
+    if (!(e.isPlayer ? isCharging : e.charging)) continue;
+    var dx = f.x - e.x, dy = f.y - e.y;
+    if (dx * dx + dy * dy > 460 * 460) continue;
+    if (Math.abs(angDiff(Math.atan2(dy, dx), e.angle)) < 0.5) return true;
+  }
+  return false;
+}
+function angDiff(a, b) {
+  var d = (a - b) % (Math.PI * 2);
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+function wallDist(f) { return Math.min(f.x, W - f.x, f.y, H - f.y); }
+function wallAwayAngle(f) {                 // 指向最近城墙（后撤找掩体的方向）
+  var dl = f.x, dr = W - f.x, dtp = f.y, db = H - f.y;
+  var m = Math.min(dl, dr, dtp, db);
+  if (m === dl) return Math.PI;
+  if (m === dr) return 0;
+  if (m === dtp) return -Math.PI / 2;
+  return Math.PI / 2;
+}
+// 垂直于标枪飞行方向、朝远离枪线一侧侧移的闪避角
+function dodgeAngle(f, a) {
+  var pvx = -a.vy, pvy = a.vx;
+  var pl = Math.sqrt(pvx * pvx + pvy * pvy) || 1;
+  pvx /= pl; pvy /= pl;
+  var side = ((f.x - a.x) * pvx + (f.y - a.y) * pvy) >= 0 ? 1 : -1;
+  return Math.atan2(pvy * side, pvx * side);
+}
+// 蹲下决策：威胁出现后先有 0.3~0.5s 反应延迟（禁止“秒蹲”），连续蹲下有上限、起身有冷却；
+// 返回需闪避的标枪（同样要等反应延迟结束，躲避/蹲下都不会是上帝反应）
+function aiCrouchThink(f, dt) {
+  var D = DIFF();                         // 当前难度的 AI 反应参数（简单=呆 / 中等=一瞄就蹲）
+  var threat = spearThreat(f);
+  var want = !!threat || chargeThreat(f);
+  if (f.hp / f.maxHp < 0.45 && wallDist(f) < 74) want = true;   // 残血到掩体后蹲下
+  f.crouchT = f.crouchT || 0;
+  f.crouchCD = f.crouchCD || 0;
+  f.reactT = f.reactT || 0;
+  f.reactDelay = f.reactDelay || 0;
+  f.reactArmed = !!f.reactArmed;
+  f.crouchHold = f.crouchHold || 0;
+  if (f.crouchCD > 0) f.crouchCD -= dt;
+  f.crouchT -= dt; if (f.crouchT < 0) f.crouchT = 0;   // 每帧衰减：防抖 + 到点强制起身
+  if (want) {
+    if (!f.reactArmed) { f.reactDelay = jr(D.reactMin, D.reactMax); f.reactArmed = true; }  // 简单：0.3~0.5s 反应；中等：0s 立刻蹲
+    f.reactT += dt;
+    // 反应期结束 + 不在冷却 + 未超连续蹲上限 → 才允许蹲下
+    if (f.reactT >= f.reactDelay && f.crouchCD <= 0 && f.crouchHold < D.hold) f.crouchT = 0.3;
+  } else {
+    f.reactT = 0; f.reactArmed = false;
+  }
+  var wasCrouch = !!f.crouch;
+  f.crouch = f.crouchT > 0;
+  if (f.crouch) f.crouchHold += dt;
+  if (wasCrouch && !f.crouch) {                 // 起身 → 进入冷却，期间禁止再蹲（中等难度冷却为 0）
+    f.crouchHold = 0;
+    f.crouchCD = jr(D.cdMin, D.cdMax);
+  } else if (!f.crouch) {
+    f.crouchHold = 0;
+  }
+  return (threat && f.reactT >= f.reactDelay) ? threat : null;
+}
+
+// 电池目标：残血强抢（无视距离）/ 中血顺路拾取 / 血量健康去截胡阻止残血敌人
+function pickHealGoal(f, target, hpFrac) {
+  if (!healItems.length) return null;
+  var best = null, bd = 1e9, i, d;
+  for (i = 0; i < healItems.length; i++) {
+    d = Math.hypot(healItems[i].x - f.x, healItems[i].y - f.y);
+    if (d < bd) { bd = d; best = healItems[i]; }
+  }
+  if (f.hp < f.maxHp) {
+    if (hpFrac < 0.5) return best;                     // 残血：强烈欲望，全图直奔
+    if (bd < 280) return best;                         // 中血：附近顺路拾取
+  }
+  if (hpFrac >= 0.7 && target && target.hp / target.maxHp < 0.5) {
+    var be = null, bed = 1e9;                          // 残血敌人最近的电池
+    for (i = 0; i < healItems.length; i++) {
+      d = Math.hypot(healItems[i].x - target.x, healItems[i].y - target.y);
+      if (d < bed) { bed = d; be = healItems[i]; }
+    }
+    if (be && bed < 300) {
+      var df = Math.hypot(be.x - f.x, be.y - f.y);
+      if (df < bed * 0.9 + 40) return be;              // 距离占优才去抢（抢先拾取=阻止）
+    }
+  }
+  return null;
+}
+
+/* ============ AI 玩家：战术走位 + 蹲下规避 + 蓄力射击 ============ */
+function updateAI(f, dt) {
+  f.moveTimer -= dt;
+  if (f.moveTimer <= 0) {
+    f.moveAngle = jr(0, Math.PI * 2);
+    f.moveTimer = jr(CFG.aiMoveMin, CFG.aiMoveMax);
+  }
+  var target = nearestEnemy(f);
+  var dT = target ? Math.hypot(target.x - f.x, target.y - f.y) : Infinity;
+  var hpFrac = f.hp / f.maxHp;
+
+  // ---- 威胁感知与蹲下（标枪飞来 / 敌方蓄力瞄准 / 残血贴墙潜行）----
+  var threat = aiCrouchThink(f, dt);
+
+  // ---- 移动策略（优先级：闪避 > 抢/截胡电池 > 残血找掩体 > 保持距离走位 > 随机游走）----
+  var ma;
+  if (threat) {
+    ma = dodgeAngle(f, threat);                       // 垂直枪线侧移躲避
+  } else {
+    var goal = pickHealGoal(f, target, hpFrac);
+    if (goal) {
+      ma = Math.atan2(goal.y - f.y, goal.x - f.x);    // 道具抢夺 / 截胡
+    } else if (hpFrac < 0.4 && target && dT < 460) {
+      // 残血后撤找城墙掩体；贴墙后沿墙横移潜行
+      var wa = wallAwayAngle(f);
+      if (wallDist(f) < 74) {
+        f.coverT = (f.coverT || 0) - dt;
+        if (f.coverT <= 0) { f.coverT = jr(0.5, 1.3); f.coverSide = -(f.coverSide || 1); }
+        ma = wa + (Math.PI / 2) * f.coverSide;
+      } else ma = wa;
+    } else if (target) {
+      // 保持安全投掷距离 + 左右走位（配合腿部摆动增加瞄准难度）
+      if (dT > 340) ma = Math.atan2(target.y - f.y, target.x - f.x);
+      else if (dT < 170) ma = Math.atan2(f.y - target.y, f.x - target.x);
+      else {
+        f.strafeT = (f.strafeT || 0) - dt;
+        if (f.strafeT <= 0) { f.strafeT = jr(0.6, 1.5); f.strafeSide = -(f.strafeSide || 1); }
+        ma = Math.atan2(target.y - f.y, target.x - f.x) + (Math.PI / 2) * (f.strafeSide || 1);
+      }
+    } else {
+      ma = f.moveAngle;                               // 无目标：随机游走
+    }
+  }
+  f.moveAngle = ma;
+
+  // 贴边保护：靠近边界且即将走出时折回外向分量（不打断闪避/走位）
+  var mcx = Math.cos(ma), mcy = Math.sin(ma), ocx = mcx, ocy = mcy;
+  if (f.x < CFG.towerR + 10 && mcx < 0) mcx = 0;
+  if (f.x > W - CFG.towerR - 10 && mcx > 0) mcx = 0;
+  if (f.y < CFG.towerR + 10 && mcy < 0) mcy = 0;
+  if (f.y > H - CFG.towerR - 10 && mcy > 0) mcy = 0;
+  if (mcx !== ocx || mcy !== ocy) {
+    if (mcx === 0 && mcy === 0) mcx = f.x < W / 2 ? 1 : -1;
+    ma = Math.atan2(mcy, mcx);
+  }
+
+  // 蹲下代价：简单难度蹲下几乎挪不动（含闪避）；中等难度为原版 0.75
+  var spd = CFG.moveSpeed * 0.7 * (f.charging ? CFG.chargeMoveMult : 1) *
+            (f.crouch ? DIFF().crouchSpd : 1);
+  f.x += Math.cos(ma) * spd * dt;
+  f.y += Math.sin(ma) * spd * dt;
+  f.x = clamp(f.x, CFG.towerR, W - CFG.towerR);
+  f.y = clamp(f.y, CFG.towerR, H - CFG.towerR);
+
+  if (target) f.angle = Math.atan2(target.y - f.y, target.x - f.x);
+
+  if (f.charging) {
+    f.chargeT += dt;
+    if (f.chargeT >= f.chargeDur) {
+      var cr = clamp(f.chargeT / CFG.maxChargeTime, 0, 1);
+      fireSpear(f, f.angle + jr(-0.14, 0.14), cr);
+      f.charging = false;
+      f.chargeT = 0;
+    }
+  } else {
+    f.shootTimer -= dt;
+    if (f.shootTimer <= 0 && target) {
+      f.charging = true;
+      f.chargeT = 0;
+      f.chargeDur = jr(0.35, 0.95);
+      f.shootTimer = jr(CFG.aiShootMin, CFG.aiShootMax);
+    }
+  }
+}
+
+/* ============ 支援单位（占领中立后获得） ============ */
+function updateSupport(f, dt) {
+  if (f.support <= 0) return;
+  f.supTimer -= dt;
+  if (f.supTimer <= 0) {
+    var target = f.isNeutral ? null : nearestPlayerFaction(f);
+    if (target) {
+      var ang = Math.atan2(target.y - f.y, target.x - f.x);
+      var speed = 320;
+      spears.push({
+        x: f.x + Math.cos(ang) * (CFG.towerR + 14), y: f.y + Math.sin(ang) * (CFG.towerR + 14),
+        px: f.x, py: f.y,
+        x0: f.x + Math.cos(ang) * (CFG.towerR + 14), y0: f.y + Math.sin(ang) * (CFG.towerR + 14),
+        handH: 30,
+        vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+        owner: f.id, dmg: 5, life: 3, maxLife: 3,
+        color: f.color, skinId: null, chargeRatio: 0.2
+      });
+    }
+    f.supTimer = 1.2;
+  }
+}
+
+/* ============ 蓄力特效（仅玩家皮肤生效，数量受限） ============ */
+function spawnChargeFx(f, cr, sk) {
+  var tipX = f.x + Math.cos(f.angle) * (CFG.towerR + 6);
+  var tipY = f.y + Math.sin(f.angle) * (CFG.towerR + 6);
+  var boost = 1 + cr;   // 蓄力越深粒子越多越大
+  var n, i;
+  switch (sk.chargeFx) {
+    case 'ink':
+      if (Math.random() < 0.75) {
+        n = cr >= 1 ? 3 : 2;
+        for (i = 0; i < n; i++) addP(tipX + jr(-10, 10), tipY + jr(-10, 10), 'rgba(43,33,24,0.8)', 0.7, jr(-18, 18), jr(-34, -8), jr(2.6, 5.4) * boost * 0.7, 'dot', 46, jr(-4, 10));
+      }
+      break;
+    case 'frost':
+      if (Math.random() < 0.75) {
+        n = cr >= 1 ? 3 : 2;
+        for (i = 0; i < n; i++) addP(tipX + jr(-13, 13), tipY + jr(-13, 13), Math.random() < 0.4 ? '#ffffff' : 'rgba(191,227,245,0.95)', 0.75, jr(-16, 16), jr(-22, -4), jr(2, 4.2) * boost * 0.7, 'dot', 46, jr(-4, 10));
+      }
+      break;
+    case 'electric':
+      if (Math.random() < 0.85) {
+        var ec = cr >= 1 ? '#ffffff' : '#fde68a';
+        n = cr >= 1 ? 3 : 2;
+        for (i = 0; i < n; i++) addP(tipX + jr(-11, 11), tipY + jr(-18, 2), ec, 0.26, jr(-60, 60), jr(-70, -12), jr(1.6, 3) * boost * 0.7, 'dot', 46, jr(-4, 10));
+      }
+      break;
+    case 'ember':
+      if (Math.random() < 0.8) {
+        n = cr >= 1 ? 3 : 2;
+        for (i = 0; i < n; i++) addP(tipX + jr(-8, 8), tipY - jr(2, 18), Math.random() < 0.4 ? '#fde047' : '#ef4444', 0.6, jr(-16, 16), jr(-42, -16), jr(2.2, 4.2) * boost * 0.7, 'ember', 46, jr(2, 14));
+      }
+      break;
+    case 'vine':
+      if (Math.random() < 0.75) {
+        n = cr >= 1 ? 3 : 2;
+        for (i = 0; i < n; i++) addP(tipX + jr(-15, 15), tipY + jr(-15, 15), Math.random() < 0.4 ? '#a3e635' : '#65a30d', 0.65, jr(-22, 22), jr(-22, 22), jr(1.8, 3.6) * boost * 0.7, 'dot', 46, jr(-4, 10));
+      }
+      break;
+  }
+}
+function updateChargeFx() {
+  var sk = curSkinObj;
+  var p = factions[0];
+  if (p && p.alive && isCharging && chargeTime > 0.08) {
+    spawnChargeFx(p, clamp(chargeTime / CFG.maxChargeTime, 0, 1), sk);
+  }
+  // AI / 中立阵营蓄力：无皮肤特效（只在满蓄力时给通用提示光）
+  for (var i = 1; i < factions.length; i++) {
+    var f = factions[i];
+    if (f.alive && f.charging && f.chargeT > 0.08) {
+      var cr = clamp(f.chargeT / CFG.maxChargeTime, 0, 1);
+      if (cr >= 1 && Math.random() < 0.4) {
+        var tx = f.x + Math.cos(f.angle) * (CFG.towerR + 6);
+        var ty = f.y + Math.sin(f.angle) * (CFG.towerR + 6);
+        addP(tx, ty, '#ffffff', 0.25, jr(-20, 20), jr(-20, 20), jr(1.2, 2.4), 'dot', 46, jr(-4, 10));
+      }
+    }
+  }
+}
+
+/* ============ 命中特效（sk 为 null 表示素色命中：阵营色通用特效） ============ */
+function onHitFx(x, y, sk, baseColor, h) {
+  h = (h === undefined ? 30 : h);   // 3D爆发高度（默认躯干高；调用方传标枪实时高度）
+  if (!sk) {
+    var bc = baseColor || '#ffffff';
+    addRing(x, y, 22, bc);
+    for (var i = 0; i < 5; i++) {
+      var a = jr(0, Math.PI * 2), s = jr(25, 90);
+      addP(x, y, bc, jr(0.25, 0.5), Math.cos(a) * s, Math.sin(a) * s, jr(1.4, 2.8), 'dot', h, jr(8, 34));
+    }
+    return;
+  }
+  // 玩家皮肤命中：更大冲击环 + 更多溅射 + 地面印记
+  addRing(x, y, 44, sk.fx);
+  addRing(x, y, 28, '#ffffff');
+  spawnSpot(x, y, sk.hitFx, sk.fx);
+  for (var k = 0; k < 14; k++) {
+    var aa = jr(0, Math.PI * 2), ss = jr(40, 170);
+    var kind = 'dot';
+    if (sk.hitFx === 'fire') kind = 'ember';
+    else if (sk.hitFx === 'sprout') kind = 'leaf';
+    addP(x, y, k % 3 === 0 ? '#ffffff' : sk.fx, jr(0.35, 0.8),
+      Math.cos(aa) * ss, Math.sin(aa) * ss, jr(1.8, 4), kind, h + jr(-4, 6), jr(8, 40));
+  }
+}
+
+/* ============ 碰撞检测 ============ */
+// 玩家标枪磁吸：靠近目标且正朝它飞时，逐帧把弹道朝目标中心轻推（速度大小不变，只改方向）。
+// 只对“本该擦过身位”的近失弹生效，正对目标飞的本来就会命中 → 视为命中宽容补偿，降低蹲下减判定的挫败感。
+function spearMagnet(a, dt) {
+  var sp = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+  if (sp < 1) return;
+  for (var j = 0; j < factions.length; j++) {
+    var f = factions[j];
+    if (!f.alive || f.id === a.owner) continue;
+    var dx = f.x - a.x, dy = f.y - a.y;
+    var d = Math.sqrt(dx * dx + dy * dy);
+    if (d > MAGNET_R || d < 1) continue;              // 只在捕获半径内
+    if ((a.vx * dx + a.vy * dy) / (sp * d) < 0.35) continue;   // 只吸附正在接近的目标（不回头追踪）
+    var k = clamp(MAGNET_K * dt, 0, 0.25);            // 每帧最多向目标偏转 25%
+    a.vx += (dx / d * sp - a.vx) * k;
+    a.vy += (dy / d * sp - a.vy) * k;
+    var sp2 = Math.sqrt(a.vx * a.vx + a.vy * a.vy) || 1;
+    a.vx = a.vx / sp2 * sp; a.vy = a.vy / sp2 * sp;   // 保持原速，只修正方向
+  }
+}
+
+function checkCollisions() {
+  for (var i = spears.length - 1; i >= 0; i--) {
+    var a = spears[i];
+    var hit = false;
+    for (var j = 0; j < factions.length; j++) {
+      var f = factions[j];
+      if (!f.alive || f.id === a.owner) continue;
+      var dx = a.x - f.x, dy = a.y - f.y;
+      var hr = CFG.towerR;
+      if (isCrouchF(f)) hr *= CROUCH_SCALE;   // 蹲下：受击碰撞体积同步缩小（AI 同样生效）
+      // 玩家标枪宽容判定：半径加成 + 打蹲下目标不再按 0.65 全额缩小（蹲下判定≈站立原判定）
+      if (factions[0] && a.owner === factions[0].id) {
+        hr = CFG.towerR * (isCrouchF(f) ? PLAYER_HIT_CROUCH : 1) + PLAYER_HIT_BONUS;
+      }
+      if (dx * dx + dy * dy < hr * hr) {
+        f.hp -= a.dmg;
+        onHitFx(a.x, a.y, (a.skinId === null || a.skinId === undefined) ? null : skinById(a.skinId), a.color, a.h);
+        // 被击中可能打断蓄力
+        if (f.isPlayer) {
+          if (isCharging && Math.random() < CFG.interruptChance) {
+            isCharging = false; chargeTime = 0;
+            addFloater(f.x, f.y - 34, '蓄力被打断', '#ffcc66');
+          }
+        } else if (f.charging && Math.random() < CFG.interruptChance) {
+          f.charging = false; f.chargeT = 0;
+        }
+        // 中立阵营被激怒会反击
+        if (f.isNeutral && !f.angry) {
+          f.angry = true; f.aggroId = a.owner; f.angryT = 10;
+        }
+        addFloater(f.x, f.y - 20, '-' + Math.round(a.dmg), '#ffffff');
+        if (f.hp <= 0) {
+          f.hp = 0;
+          if (f.isNeutral) {
+            f.alive = false; f.defeated = true;   // 留下废墟，等待被占领
+            addFloater(f.x, f.y - 40, '被击败！可占领', '#ffcc66');
+          } else {
+            f.alive = false;
+            for (var k = 0; k < 22; k++) {
+              var ang2 = jr(0, Math.PI * 2), spd2 = jr(50, 160);
+              addP(f.x, f.y, f.color, jr(0.5, 1.0), Math.cos(ang2) * spd2, Math.sin(ang2) * spd2, jr(3, 6), 'dot');
+            }
+          }
+        }
+        hit = true;
+        break;
+      }
+    }
+    if (hit) spears.splice(i, 1);
+  }
+}
+
+/* ============ 回血（占领奖励 / 道具拾取） ============ */
+function healFaction(f, ratio, msg) {
+  var before = f.hp;
+  f.hp = Math.min(f.maxHp, f.hp + f.maxHp * ratio);
+  if (f.hp > before) {
+    addFloater(f.x, f.y - 46, '+' + Math.round(f.hp - before) + (msg ? ' ' + msg : ''), '#66ff88');
+    addRing(f.x, f.y, 28, '#ffe14d');
+  }
+}
+/* 回血道具：每局每15秒在随机位置掉落一个；任何角色触碰即回25%最大生命并消失 */
+function updateHealItems(dt) {
+  healDropT += dt;
+  if (healDropT >= CFG.healEvery) {
+    healDropT -= CFG.healEvery;
+    for (var s = 0; s < 3; s++)   // 每次在活动范围内随机生成 3 个
+      healItems.push({ uid: ++healUid, x: jr(52, W - 52), y: jr(52, H - 52), t: 0 });
+    powerItems.push({ uid: ++powerUid, x: jr(52, W - 52), y: jr(52, H - 52), t: 0 });  // 大力丸与回血电池同步随机掉落
+  }
+  var i, j, it, f;
+  for (i = healItems.length - 1; i >= 0; i--) {
+    it = healItems[i];
+    it.t += dt;
+    for (j = 0; j < factions.length; j++) {
+      f = factions[j];
+      if (!f.alive || (f.isNeutral && f.defeated)) continue;
+      if (Math.hypot(f.x - it.x, f.y - it.y) < CFG.pickupR) {
+        healFaction(f, CFG.healRatio, '回血');   // 一次性消耗
+        healItems.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
+/* 大力丸：任何角色（含AI）触碰即拾取销毁 → 获得伤害翻倍Buff（POWER_BUFF_T 秒内的下一次标枪） */
+function updatePowerItems(dt) {
+  var i, j, it, f;
+  for (i = powerItems.length - 1; i >= 0; i--) {
+    it = powerItems[i];
+    it.t += dt;
+    for (j = 0; j < factions.length; j++) {
+      f = factions[j];
+      if (!f.alive || (f.isNeutral && f.defeated)) continue;
+      if (Math.hypot(f.x - it.x, f.y - it.y) < CFG.pickupR) {
+        f.powerT = POWER_BUFF_T;                 // 获得伤害翻倍Buff
+        addFloater(f.x, f.y - 46, '大力丸！伤害翻倍', '#ffd35c');
+        addRing(f.x, f.y, 28, '#ffd35c');
+        powerItems.splice(i, 1);                 // 一次性消耗
+        break;
+      }
+    }
+  }
+}
+
+/* ============ 占领中立废墟 ============ */
+function updateCapture(dt) {
+  for (var i = 0; i < factions.length; i++) {
+    var n = factions[i];
+    if (!n.isNeutral || !n.defeated || n.capturedBy >= 0) continue;
+    var holder = null, hd = Infinity;
+    for (var j = 0; j < CFG.playerCount; j++) {
+      var f = factions[j];
+      if (!f.alive) continue;
+      var d = Math.hypot(f.x - n.x, f.y - n.y);
+      if (d < CFG.captureRadius && d < hd) { hd = d; holder = f; }
+    }
+    if (holder) {
+      if (n.capBy !== holder.id) { n.capBy = holder.id; n.capProg = 0; }
+      n.capProg += dt / CFG.captureTime;
+      if (n.capProg >= 1) {
+        n.capProg = 1;
+        n.capturedBy = holder.id;
+        holder.support = Math.min(3, holder.support + 1);   // 获得单位支援
+        // 占领回血：玩家每占领一个无主阵营恢复25%最大生命值
+        if (holder.isPlayer) healFaction(holder, CFG.healRatio, '占领回血');
+        addRing(n.x, n.y, 40, holder.color);
+        addFloater(n.x, n.y - 30, holder.isPlayer ? '占领成功！+1 支援' : (holder.name + ' 占领'), holder.isPlayer ? '#44ff77' : '#ffcc66');
+      }
+    } else {
+      n.capProg = Math.max(0, n.capProg - dt * 0.6);
+      if (n.capProg <= 0) n.capBy = -1;
+    }
+  }
+}
+
+/* ============ 胜负判定 ============ */
+function checkWin() {
+  var p = factions[0];
+  var capturedAll = true, i;
+  for (i = CFG.playerCount; i < factions.length; i++) {
+    if (factions[i].capturedBy !== 0) { capturedAll = false; break; }
+  }
+  if (p && p.alive && capturedAll) { gameOver = true; winReason = 'capture'; winner = p; return; }
+  if (p && !p.alive) {
+    gameOver = true; winReason = 'dead';
+    var lead = null;
+    for (i = 0; i < CFG.playerCount; i++) { if (factions[i].alive && (!lead || factions[i].hp > lead.hp)) lead = factions[i]; }
+    winner = lead;
+    return;
+  }
+  var aliveP = 0, last = null;
+  for (i = 0; i < CFG.playerCount; i++) { if (factions[i].alive) { aliveP++; last = factions[i]; } }
+  if (aliveP <= 1) { gameOver = true; winReason = (p && p.alive) ? 'last' : 'draw'; winner = last; }
+}
+
+/* ============ 主更新 ============ */
+function update(dt) {
+  // 非对局状态自动释放指针锁（回菜单/结算可正常点击）
+  if (document.pointerLockElement && (!started || gameOver)) {
+    try { document.exitPointerLock(); } catch (e) {}
+  }
+  canvas.style.cursor = fpOn() ? 'none' : '';   // FP隐藏系统指针（视角随鼠标位移转动），其余恢复十字
+  if (!started || gameOver) return;
+  nowT += dt;
+  var i, f;
+
+  // 玩家：移动（蓄力时减速）+ 瞄准 + 蓄力
+  var p = factions[0];
+  if (p && p.alive) {
+    var dx = 0, dy = 0;
+    if (keys['ArrowLeft'] || keys['a'] || keys['A']) dx -= 1;
+    if (keys['ArrowRight'] || keys['d'] || keys['D']) dx += 1;
+    if (keys['ArrowUp'] || keys['w'] || keys['W']) dy -= 1;
+    if (keys['ArrowDown'] || keys['s'] || keys['S']) dy += 1;
+    if (fpOn() && (dx !== 0 || dy !== 0)) {
+      // FP：按键相对视角方向（前=视线前方、右=视线右侧）——修复FP下键位反转180°
+      // 视线前方（2D y ≡ 世界z）：f = (−sinYaw, −cosYaw)；右向量 r = (−fy, fx)
+      var fwX = -Math.sin(fpYaw), fwY = -Math.cos(fpYaw);
+      var ix = dx, iy = dy;
+      dx = -fwY * ix - fwX * iy;
+      dy = fwX * ix - fwY * iy;      // 正交旋转，长度不变（len仍用 dx²+dy²）
+    }
+    if (dx !== 0 || dy !== 0) {
+      var len = Math.sqrt(dx * dx + dy * dy);
+      var pspd = CFG.moveSpeed * (isCharging ? CFG.chargeMoveMult : 1);
+      p.x += (dx / len) * pspd * dt;
+      p.y += (dy / len) * pspd * dt;
+    }
+    p.x = clamp(p.x, CFG.towerR, W - CFG.towerR);
+    p.y = clamp(p.y, CFG.towerR, H - CFG.towerR);
+    if (fpOn()) {
+      if (!fpInit) { fpSyncYaw(p); fpInit = true; }
+      fpUpdateCamAim(p);   // 准星射线→mouseX/Y，下面的瞄准逻辑零改动
+    }
+    p.angle = Math.atan2(mouseY - p.y, mouseX - p.x);
+    if (isCharging) chargeTime += dt;
+  }
+
+  // AI / 中立
+  for (i = 1; i < factions.length; i++) {
+    f = factions[i];
+    if (!f.alive) continue;
+    if (f.isNeutral) updateNeutral(f, dt);
+    else updateAI(f, dt);
+    updateSupport(f, dt);
+  }
+  updateChargeFx();
+  updateHealItems(dt);   // 回血道具：定时掉落 + 触碰拾取
+  updatePowerItems(dt);  // 大力丸：与电池同步掉落 + 触碰拾取（伤害翻倍Buff）
+  for (i = 0; i < factions.length; i++) {        // Buff倒计时：到点未投掷则失效
+    if (factions[i].powerT > 0) factions[i].powerT -= dt;
+  }
+
+  // 标枪飞行 + 拖尾（玩家皮肤枪特效更明显，AI 素色枪为阵营色细尾）
+  for (i = spears.length - 1; i >= 0; i--) {
+    var a = spears[i];
+    a.px = a.x; a.py = a.y;
+    a.x += a.vx * dt; a.y += a.vy * dt; a.life -= dt;   // 2D权威：手部起点出发的匀速直线
+    if (factions[0] && a.owner === factions[0].id) spearMagnet(a, dt);   // 玩家标枪磁吸补偿（瞄了就能打中）
+    var age = a.maxLife - a.life;
+    var h0 = (a.handH === undefined || a.handH === null) ? 46 : a.handH;
+    var uH = a.maxLife > 0 ? clamp(age / a.maxLife, 0, 1) : 1;
+    // 高度：3D按“地面进度”取 手→落点 弦上的点（x/y/z 同一参数 → 绝对直线）；否则按时间线性
+    if (r3d) {
+      if (a.wx0 === undefined || a.wx0 === null) spearLine3D(a);
+      var gS0 = pxToGround(a.x, a.y);
+      var lamH = Math.hypot(gS0.x - a.wx0, gS0.z - a.wz0) / (a.spanW || 1);
+      if (!(lamH >= 0)) lamH = 0;
+      if (lamH > 1) lamH = 1;
+      a.h = h0 * (1 - lamH);
+    } else {
+      a.h = h0 * (1 - uH);
+    }
+    a.vh = -h0 / (a.maxLife || 1);
+    if (a.skinId !== null && a.skinId !== undefined) {
+      var sk = skinById(a.skinId);
+      // 主拖尾粒子（更多、更大）
+      var nTrail = sk.throwFx === 'lightning' ? 2 : 3;
+      for (var ti = 0; ti < nTrail; ti++) {
+        if (Math.random() > 0.75) continue;
+        var kind = 'dot';
+        var tcol = sk.trail;
+        if (sk.throwFx === 'leaf') kind = 'leaf';
+        else if (sk.throwFx === 'flame') kind = 'ember';
+        else if (sk.throwFx === 'lightning') tcol = Math.random() < 0.5 ? '#ffffff' : sk.fx;
+        addP(a.x + jr(-3, 3), a.y + jr(-3, 3), tcol,
+          sk.throwFx === 'lightning' ? 0.28 : jr(0.35, 0.7),
+          jr(-14, 14), jr(-14, 14), jr(1.8, 4), kind, a.h + jr(-2, 2), jr(1, 8));
+      }
+      // 皮肤发光晕（让飞行轨迹更醒目）
+      if (Math.random() < 0.45) {
+        addP(a.x, a.y, sk.glow, 0.3, jr(-6, 6), jr(-6, 6), jr(2.5, 4.5), 'dot', a.h, jr(0, 6));
+      }
+    } else if (Math.random() < 0.4) {
+      addP(a.x, a.y, a.color, jr(0.2, 0.4), jr(-8, 8), jr(-8, 8), jr(1.2, 2.4), 'dot', a.h, jr(0, 5));
+    }
+    if (a.life <= 0 || a.x < -50 || a.x > W + 50 || a.y < -50 || a.y > H + 50) spears.splice(i, 1);
+  }
+
+  // 粒子
+  for (i = particles.length - 1; i >= 0; i--) {
+    var pt = particles[i];
+    pt.life -= dt;
+    if (pt.kind === 'leaf') { pt.vx = Math.sin(nowT * 3 + pt.x * 0.05) * 16; pt.vy += 10 * dt; }
+    else if (pt.kind === 'ember') { pt.vy -= 8 * dt; }
+    pt.x += pt.vx * dt; pt.y += pt.vy * dt;
+    // 3D高度：竖直速度 + 轻重力，落地停住（2D绘制不读h/vh）
+    pt.h += pt.vh * dt; pt.vh -= 60 * dt;
+    if (pt.h < 0) { pt.h = 0; if (pt.vh < 0) pt.vh = 0; }
+    if (pt.life <= 0) particles.splice(i, 1);
+  }
+  // 冲击环
+  for (i = rings.length - 1; i >= 0; i--) {
+    var rg = rings[i];
+    rg.life -= dt;
+    rg.r += (rg.maxR - rg.r) * Math.min(1, dt * 12);
+    if (rg.life <= 0) rings.splice(i, 1);
+  }
+  // 地面印记
+  for (i = spots.length - 1; i >= 0; i--) {
+    spots[i].life -= dt;
+    if (spots[i].life <= 0) spots.splice(i, 1);
+  }
+  // 飘字
+  for (i = floaters.length - 1; i >= 0; i--) {
+    var fl = floaters[i];
+    fl.life -= dt; fl.y -= 26 * dt;
+    if (fl.life <= 0) floaters.splice(i, 1);
+  }
+  // 版图环境特效（低频率、受限）
+  ambientFx();
+
+  checkCollisions();
+  updateCapture(dt);
+  checkWin();
+  if (gameOver) resetKeys();   // 死亡/结算瞬间强制清空按键状态（本帧为过渡帧，不会提前拦截）
+}
+
+/* ============ 版图背景绘制 ============ */
+function drawCenter(th) {
+  var cx = W / 2, cy = H / 2;
+  var g = ctx.createRadialGradient(cx, cy, 10, cx, cy, 145);
+  g.addColorStop(0, th.center);
+  g.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath(); ctx.arc(cx, cy, 145, 0, Math.PI * 2); ctx.fill();
+  ctx.save();
+  if (th.centerStyle === 'inkpool') {
+    ctx.fillStyle = th.ring;
+    for (var i = 0; i < 5; i++) {
+      var a = i * 1.26, rr = 18 + i * 7;
+      ctx.globalAlpha = 0.13;
+      ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 8, cy + Math.sin(a) * 8, rr, rr * 0.8, a, 0, Math.PI * 2); ctx.fill();
+    }
+  } else if (th.centerStyle === 'crack') {
+    ctx.strokeStyle = '#7fb6dd'; ctx.lineWidth = 1.4; ctx.globalAlpha = 0.6;
+    for (var k = 0; k < 7; k++) {
+      var aa = k * 0.9, px = cx, py = cy;
+      ctx.beginPath(); ctx.moveTo(cx, cy);
+      for (var s2 = 1; s2 <= 3; s2++) {
+        px = cx + Math.cos(aa + jr(-0.3, 0.3)) * s2 * 16;
+        py = cy + Math.sin(aa + jr(-0.3, 0.3)) * s2 * 16;
+        ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  } else if (th.centerStyle === 'copper') {
+    var fullCharge = factions[0] && factions[0].alive && isCharging && chargeTime >= CFG.maxChargeTime;
+    ctx.strokeStyle = th.ring; ctx.lineWidth = 2;
+    ctx.globalAlpha = fullCharge ? 0.9 : 0.45;
+    ctx.beginPath(); ctx.arc(cx, cy, 52, 0, Math.PI * 2); ctx.stroke();
+    for (var t = 0; t < 8; t++) {
+      var ta = t * Math.PI / 4;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ta) * 30, cy + Math.sin(ta) * 30);
+      ctx.lineTo(cx + Math.cos(ta) * 52, cy + Math.sin(ta) * 52);
+      ctx.stroke();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, 22, 0, Math.PI * 2); ctx.stroke();
+  } else if (th.centerStyle === 'ember') {
+    var puls = 0.5 + 0.5 * Math.sin(nowT * 3);
+    var g2 = ctx.createRadialGradient(cx, cy, 4, cx, cy, 58);
+    g2.addColorStop(0, 'rgba(251,146,60,' + (0.45 + 0.3 * puls) + ')');
+    g2.addColorStop(1, 'rgba(124,45,26,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(cx, cy, 58, 0, Math.PI * 2); ctx.fill();
+  } else if (th.centerStyle === 'moss') {
+    ctx.globalAlpha = 0.5;
+    ctx.fillStyle = 'rgba(63,122,68,0.5)';
+    ctx.beginPath(); ctx.ellipse(cx, cy, 64, 48, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(163,230,53,0.25)';
+    ctx.beginPath(); ctx.ellipse(cx - 14, cy - 8, 26, 18, 0.3, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+function drawRings(th) {
+  var cx = W / 2, cy = H / 2;
+  var radii = [60, 105, 160, 215];   // 中立圈在 105，玩家圈在 215，便于识别阵营位置
+  ctx.save();
+  for (var i = 0; i < radii.length; i++) {
+    var r = radii[i];
+    ctx.strokeStyle = th.ring;
+    ctx.lineWidth = (i === 3) ? 3 : 1.8;
+    ctx.globalAlpha = 0.30 + 0.10 * i;
+    ctx.setLineDash([]);
+    if (th.ringStyle === 'ink') ctx.setLineDash([26, 8, 12, 10]);
+    else if (th.ringStyle === 'gold') ctx.setLineDash([16, 10]);
+    else if (th.ringStyle === 'charcoal') ctx.setLineDash([30, 12]);
+    else if (th.ringStyle === 'vine') ctx.setLineDash([8, 7]);
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.stroke();
+    if (th.ringStyle === 'vine') {
+      ctx.setLineDash([]);
+      ctx.fillStyle = 'rgba(101,163,13,0.5)';
+      for (var a2 = 0; a2 < Math.PI * 2; a2 += Math.PI / 8) {
+        ctx.beginPath();
+        ctx.ellipse(cx + Math.cos(a2) * r, cy + Math.sin(a2) * r, 4, 2, a2 + 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (th.ringStyle === 'gold') {
+      ctx.setLineDash([]);
+      ctx.strokeStyle = 'rgba(212,175,55,0.6)';
+      for (var a3 = 0; a3 < Math.PI * 2; a3 += Math.PI / 10) {
+        ctx.beginPath();
+        ctx.moveTo(cx + Math.cos(a3) * (r - 4), cy + Math.sin(a3) * (r - 4));
+        ctx.lineTo(cx + Math.cos(a3) * (r + 4), cy + Math.sin(a3) * (r + 4));
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+function drawDeco(th) {
+  ctx.save();
+  for (var i = 0; i < themeDeco.length; i++) {
+    var d = themeDeco[i];
+    if (th.edgeStyle === 'feibai') {
+      ctx.strokeStyle = th.edge; ctx.globalAlpha = 0.25; ctx.lineWidth = 2 * d.s;
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x + Math.cos(d.a) * d.b, d.y + Math.sin(d.a) * d.b);
+      ctx.stroke();
+    } else if (th.edgeStyle === 'fog') {
+      ctx.globalAlpha = 0.10;
+      ctx.fillStyle = th.edge;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 14 * d.s, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.3; ctx.strokeStyle = th.edge; ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(d.x, d.y);
+      ctx.lineTo(d.x + Math.cos(d.a) * d.b, d.y + Math.sin(d.a) * d.b);
+      ctx.stroke();
+    } else if (th.edgeStyle === 'arc') {
+      if (Math.sin(nowT * 6 + d.p) > 0.72) {
+        ctx.strokeStyle = th.edge; ctx.globalAlpha = 0.6; ctx.lineWidth = 1.2;
+        var mx = d.x, my = d.y;
+        ctx.beginPath(); ctx.moveTo(mx, my);
+        for (var s3 = 0; s3 < 3; s3++) {
+          mx += jr(-9, 9); my += jr(-9, 9);
+          ctx.lineTo(mx, my);
+        }
+        ctx.stroke();
+      }
+    } else if (th.edgeStyle === 'emberD') {
+      ctx.globalAlpha = 0.35;
+      ctx.fillStyle = th.edge;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 1.6 * d.s, 0, Math.PI * 2); ctx.fill();
+    } else if (th.edgeStyle === 'flower') {
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#fda4af';
+      for (var pp = 0; pp < 5; pp++) {
+        var pa = pp * 1.256 + d.a;
+        ctx.beginPath();
+        ctx.arc(d.x + Math.cos(pa) * 3 * d.s, d.y + Math.sin(pa) * 3 * d.s, 1.7 * d.s, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath(); ctx.arc(d.x, d.y, 1.8 * d.s, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+function ambientFx() {
+  var th = BOARD_THEMES[curTheme];
+  if (th.edgeStyle === 'emberD' && Math.random() < 0.25) {
+    addP(jr(30, W - 30), H - jr(10, 60), 'rgba(239,68,68,0.8)', 1.6, jr(-8, 8), jr(-30, -14), jr(1, 2.4), 'ember', 6, jr(4, 14));
+  } else if (th.edgeStyle === 'arc' && Math.random() < 0.06) {
+    var ex = Math.random() < 0.5 ? jr(10, 60) : jr(W - 60, W - 10);
+    var ey = jr(20, H - 20);
+    addP(ex, ey, '#fde68a', 0.22, jr(-20, 20), jr(-20, 20), jr(1, 2), 'dot', 4, jr(-4, 10));
+  }
+}
+
+/* ============ 地面印记 ============ */
+function drawSpot(s) {
+  var a = s.life / s.max;
+  ctx.save();
+  ctx.globalAlpha = a;
+  if (s.kind === 'ink') {
+    ctx.fillStyle = '#2b2118';
+    for (var i = 0; i < 4; i++) {
+      ctx.beginPath();
+      ctx.arc(s.x + (i - 1.5) * 5, s.y + ((i % 2) ? 4 : -4), 3 + (i % 3), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (s.kind === 'frost') {
+    ctx.strokeStyle = '#bfe3f5'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 9, 0, Math.PI * 2); ctx.stroke();
+    for (var k = 0; k < 3; k++) {
+      var aa = k * Math.PI / 3;
+      ctx.beginPath();
+      ctx.moveTo(s.x - Math.cos(aa) * 7, s.y - Math.sin(aa) * 7);
+      ctx.lineTo(s.x + Math.cos(aa) * 7, s.y + Math.sin(aa) * 7);
+      ctx.stroke();
+    }
+  } else if (s.kind === 'ember') {
+    var glow = 0.5 + 0.5 * Math.sin(nowT * 8 + s.x);
+    ctx.fillStyle = 'rgba(239,68,68,' + (0.35 + 0.5 * glow) + ')';
+    ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill();
+  } else if (s.kind === 'sprout') {
+    var grow = 1 - a;                    // 长小芽后消失
+    ctx.strokeStyle = '#65a30d'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(s.x, s.y + 4);
+    ctx.quadraticCurveTo(s.x, s.y - 4 * grow, s.x + 2, s.y - 9 * grow);
+    ctx.stroke();
+    ctx.fillStyle = '#a3e635';
+    ctx.beginPath(); ctx.ellipse(s.x - 3, s.y - 6 * grow, 4, 2.2, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s.x + 4, s.y - 8 * grow, 4, 2.2, 0.5, 0, Math.PI * 2); ctx.fill();
+  } else {
+    ctx.fillStyle = s.color;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+/* ============ 标枪绘制（皮肤只作用于玩家射出的标枪） ============ */
+function drawSpear(a) {
+  var hasSkin = (a.skinId !== null && a.skinId !== undefined);
+  var sk = hasSkin ? skinById(a.skinId) : null;
+  var ang = Math.atan2(a.vy, a.vx);
+  ctx.save();
+  // 拖尾：玩家皮肤枪更粗更亮，AI 素色枪为阵营色细尾
+  if (hasSkin) {
+    ctx.strokeStyle = sk.trail;
+    ctx.lineWidth = 4 + a.chargeRatio * 3;
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(a.x, a.y); ctx.stroke();
+    // 皮肤发光外层（更明显）
+    ctx.globalAlpha = 0.30 + 0.35 * a.chargeRatio;
+    ctx.strokeStyle = sk.glow;
+    ctx.lineWidth = 7 + a.chargeRatio * 5;
+    ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(a.x, a.y); ctx.stroke();
+  } else {
+    ctx.strokeStyle = a.color;
+    ctx.lineWidth = 2.5 + a.chargeRatio * 2;
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.moveTo(a.px, a.py); ctx.lineTo(a.x, a.y); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.translate(a.x, a.y);
+  ctx.rotate(ang);
+  if (!hasSkin) {
+    // 素色标枪：阵营色枪杆 + 白色枪尖
+    ctx.strokeStyle = a.color; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(5, 0); ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(2, -3.5); ctx.lineTo(2, 3.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
+    return;
+  }
+  // 枪杆（阵营色可读性 + 皮肤材质细线）
+  ctx.strokeStyle = a.color; ctx.lineWidth = 3.4;
+  ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(5, 0); ctx.stroke();
+  ctx.strokeStyle = sk.body; ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(5, 0); ctx.stroke();
+  // 枪尖（皮肤色 + 发光）
+  ctx.fillStyle = sk.tip;
+  ctx.shadowColor = sk.glow;
+  ctx.shadowBlur = 6 + a.chargeRatio * 8;
+  ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(2, -4.5); ctx.lineTo(2, 4.5); ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+  // 皮肤特色细节
+  if (sk.id === 'chiyu') {
+    ctx.fillStyle = '#f87171';
+    ctx.beginPath(); ctx.ellipse(-12, 0, 4.5, 2.6, 0, 0, Math.PI * 2); ctx.fill();   // 火红羽翎
+    ctx.fillStyle = '#fca5a5';
+    ctx.beginPath(); ctx.ellipse(-14, 0, 3, 1.6, 0, 0, Math.PI * 2); ctx.fill();
+  } else if (sk.id === 'qingteng') {
+    ctx.strokeStyle = '#65a30d'; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.arc(-3, 0, 3.6, 0.6, 4.2); ctx.stroke();                  // 藤蔓缠绕
+    ctx.fillStyle = '#a3e635';
+    ctx.beginPath(); ctx.ellipse(8, -2, 2.4, 1.3, -0.6, 0, Math.PI * 2); ctx.fill(); // 嫩芽枪尖
+  } else if (sk.id === 'leiya') {
+    if (Math.random() < 0.8) {                                                    // 电火花（更频繁）
+      ctx.strokeStyle = Math.random() < 0.4 ? '#ffffff' : '#fde68a'; ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.moveTo(9, 0); ctx.lineTo(14, jr(-5, 5)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(7, 0); ctx.lineTo(11, jr(-4, 4)); ctx.stroke();
+    }
+  } else if (sk.id === 'frost') {
+    ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(-8, -2.4); ctx.lineTo(-4, 2.4); ctx.moveTo(-2, -2.4); ctx.lineTo(2, 2.4); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    ctx.beginPath(); ctx.arc(-6, 0, 1.5, 0, Math.PI * 2); ctx.fill();             // 冰晶颗粒
+  } else if (sk.id === 'mofeng') {
+    ctx.strokeStyle = 'rgba(140,120,80,0.9)'; ctx.lineWidth = 1;                   // 细墨纹
+    ctx.beginPath(); ctx.moveTo(-9, -1.5); ctx.lineTo(-5, 1.5); ctx.moveTo(-3, -1.5); ctx.lineTo(1, 1.5); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+/* 回血道具（2D）：黄色亮边电池外框 + 中间闪电标志，高≈乐高小人1/3 */
+function drawHealItem2D(it) {
+  var w = 18, h = 26;                                     // 2D版尺寸（高≈小人1/3）
+  var x = it.x, y = it.y - 12 + Math.sin(nowT * 3 + it.uid) * 2;   // 悬浮于地面
+  var k, pts;
+  ctx.save();
+  ctx.shadowColor = '#ffe14d'; ctx.shadowBlur = 9;        // 黄色亮边发光
+  ctx.strokeStyle = '#ffe14d'; ctx.lineWidth = 3;
+  ctx.strokeRect(x - w / 2, y - h / 2, w, h);             // 电池外框
+  ctx.beginPath();                                        // 顶部正极凸头
+  ctx.moveTo(x - 4, y - h / 2);
+  ctx.lineTo(x - 4, y - h / 2 - 4);
+  ctx.lineTo(x + 4, y - h / 2 - 4);
+  ctx.lineTo(x + 4, y - h / 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = 'rgba(24,28,38,0.9)';                   // 暗色内腔
+  ctx.fillRect(x - w / 2 + 2, y - h / 2 + 2, w - 4, h - 4);
+  pts = [[0.1, 0.5], [-0.25, -0.05], [0, -0.05], [-0.1, -0.5], [0.25, 0.05], [0, 0.05]];
+  ctx.fillStyle = '#fff27a';                               // 闪电标志
+  ctx.beginPath();
+  ctx.moveTo(x + pts[0][0] * 15, y + pts[0][1] * 15);
+  for (k = 1; k < pts.length; k++) ctx.lineTo(x + pts[k][0] * 15, y + pts[k][1] * 15);
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/* 大力丸2D回退画法：黑球 + 金座 + 金色丹纹（底宽16.5=乐高躯干22的75%，总高≈26.7同电池） */
+function drawPowerItem2D(it) {
+  var x = it.x, y = it.y - 12 + Math.sin(nowT * 3 + it.uid) * 2;   // 悬浮节奏与电池一致
+  var r = 8.25, by = y + 5;                      // 球半径8.25（直径16.5），球心略高留出金座
+  var k;
+  ctx.save();
+  ctx.shadowColor = '#ffd35c'; ctx.shadowBlur = 8;
+  ctx.fillStyle = '#c9973f';                     // 金座：下宽16.5、上窄
+  ctx.beginPath();
+  ctx.moveTo(x - 8.25, by + r + 5);
+  ctx.lineTo(x - 5.5, by + r - 4);
+  ctx.lineTo(x + 5.5, by + r - 4);
+  ctx.lineTo(x + 8.25, by + r + 5);
+  ctx.closePath(); ctx.fill();
+  ctx.shadowBlur = 0;
+  var grd = ctx.createRadialGradient(x - 3, by - 3, 1, x, by, r);   // 黑色哑光金属球
+  grd.addColorStop(0, '#3c3c3c');
+  grd.addColorStop(1, '#0d0d0d');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(x, by, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#ffd35c'; ctx.lineWidth = 1.6;   // 金色丹纹：赤道环 + 竖环
+  ctx.beginPath(); ctx.ellipse(x, by, r, r * 0.32, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(x, by, r * 0.32, r, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.restore();
+}
+
+/* ============ 阵营绘制 ============ */
+function drawFaction(f, sk) {
+  // 中立废墟 / 已占领标记
+  if (f.isNeutral && f.defeated) {
+    if (f.capturedBy >= 0) {
+      var cf = factions[f.capturedBy];
+      ctx.save();
+      ctx.strokeStyle = cf.color; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 14, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = cf.color;
+      ctx.font = 'bold 12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('占', f.x, f.y + 1);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(150,150,150,0.7)'; ctx.setLineDash([4, 4]); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(f.x, f.y, 16, 0, Math.PI * 2); ctx.stroke();
+      ctx.setLineDash([]);
+      if (f.capProg > 0) {
+        ctx.strokeStyle = '#44ff77'; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, 20, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * clamp(f.capProg, 0, 1));
+        ctx.stroke();
+      }
+      ctx.fillStyle = 'rgba(180,180,180,0.85)';
+      ctx.font = '11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText('可占领', f.x, f.y + 32);
+      ctx.restore();
+    }
+    return;
+  }
+  if (!f.alive) return;
+
+  var cr = 0;
+  if (f.isPlayer && isCharging) cr = clamp(chargeTime / CFG.maxChargeTime, 0, 1);
+  else if (f.charging) cr = clamp(f.chargeT / CFG.maxChargeTime, 0, 1);
+
+  // 3D模式：弓臂弓弦由3D小人替代（血条/字母等HUD在 #ui 层绘制）
+  var t3 = fig3dOn();
+
+  // 满蓄力高亮 / 闪烁提示（玩家用皮肤发光色，AI 用阵营色）
+  if (cr >= 1) {
+    var pulse = 0.5 + 0.5 * Math.sin(nowT * 14);
+    var glowCol = f.isPlayer ? sk.glow : f.color;
+    ctx.save();
+    // 外扩脉冲光晕（径向渐变，更醒目）
+    var gg = ctx.createRadialGradient(f.x, f.y, CFG.towerR, f.x, f.y, CFG.towerR + 26 + 8 * pulse);
+    gg.addColorStop(0, f.isPlayer ? sk.glow : f.color);
+    gg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.globalAlpha = 0.35 + 0.4 * pulse;
+    ctx.fillStyle = gg;
+    ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR + 26 + 8 * pulse, 0, Math.PI * 2); ctx.fill();
+    // 快速闪烁双环
+    ctx.globalAlpha = 0.6 + 0.4 * pulse;
+    ctx.strokeStyle = glowCol; ctx.lineWidth = 4 + 3 * pulse;
+    ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR + 8 + 4 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 2;
+    ctx.globalAlpha = 0.45 + 0.45 * pulse;
+    ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR + 15 + 5 * pulse, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+    // （满蓄力文字已迁至 #ui 层 drawFactionUI）
+  }
+
+  // 弓台
+  ctx.fillStyle = f.color;
+  ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR, 0, Math.PI * 2); ctx.fill();
+  if (f.isNeutral) {   // 中立阵营加虚线外圈标识
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.setLineDash([3, 3]); ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR + 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+  ctx.strokeStyle = 'rgba(255,255,255,0.4)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR, 0, Math.PI * 2); ctx.stroke();
+
+  // 蹲下指示（2D降级模式下替代3D模型缩矮的可见状态）
+  if (isCrouchF(f) && !t3) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(80,200,255,0.95)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(f.x, f.y + CFG.towerR - 3, CFG.towerR + 7, 7, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.fillStyle = 'rgba(120,220,255,0.95)'; ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('蹲下', f.x, f.y + CFG.towerR + 14);
+    ctx.restore();
+  }
+
+  // 弓臂 + 蓄力弓弦（3D模式由小人手臂替代）
+  if (!t3) {
+    var bx1 = f.x + Math.cos(f.angle) * CFG.towerR;
+    var by1 = f.y + Math.sin(f.angle) * CFG.towerR;
+    var bx2 = f.x + Math.cos(f.angle) * (CFG.towerR + 28);
+    var by2 = f.y + Math.sin(f.angle) * (CFG.towerR + 28);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(bx1, by1); ctx.lineTo(bx2, by2); ctx.stroke();
+
+    // 蓄力弓弦（玩家用皮肤发光色，AI 用阵营色）
+    if (cr > 0) {
+      var perpA = f.angle + Math.PI / 2;
+      var sh = 10 + cr * 12;
+      ctx.strokeStyle = f.isPlayer ? sk.glow : f.color;
+      ctx.lineWidth = 2 + cr;
+      if (f.isPlayer) { ctx.shadowColor = sk.glow; ctx.shadowBlur = 4 + 6 * cr; }
+      ctx.beginPath();
+      ctx.moveTo(bx1 + Math.cos(perpA) * sh, by1 + Math.sin(perpA) * sh);
+      ctx.lineTo(bx1 - Math.cos(perpA) * sh, by1 - Math.sin(perpA) * sh);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    // 支援单位（占领中立后获得，环绕自动射击；3D模式由迷你小人替代）
+    if (f.support > 0) {
+      for (var s3 = 0; s3 < f.support; s3++) {
+        var sa = nowT * 1.4 + s3 * (Math.PI * 2 / Math.max(1, f.support));
+        var sx = f.x + Math.cos(sa) * (CFG.towerR + 13);
+        var sy = f.y + Math.sin(sa) * (CFG.towerR + 13);
+        ctx.fillStyle = f.color;
+        ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(sx, sy, 5, 0, Math.PI * 2); ctx.stroke();
+      }
+    }
+  }
+
+  // 玩家选中圈（地面光环；蓄力条/血条/字母已迁至 #ui 层）
+  if (f.isPlayer) {
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.arc(f.x, f.y, CFG.towerR + 6, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+/* ============ HUD ============ */
+function drawHUD() {
+  var th = BOARD_THEMES[curTheme], sk = curSkinObj;
+  var captured = 0, aliveP = 0, i;
+  for (i = 0; i < factions.length; i++) {
+    if (factions[i].isNeutral && factions[i].capturedBy === 0) captured++;
+    else if (!factions[i].isNeutral && factions[i].alive) aliveP++;
+  }
+  uictx.save();
+  uictx.fillStyle = 'rgba(10,14,26,0.55)';
+  uictx.fillRect(10, 10, 250, 80);
+  uictx.textAlign = 'left'; uictx.textBaseline = 'top';
+  uictx.fillStyle = '#e0e8ff'; uictx.font = '13px sans-serif';
+  uictx.fillText('皮肤: ' + sk.icon + sk.name + '    版图: ' + th.name, 20, 18);
+  uictx.fillText('占领中立: ' + captured + '/3    存活玩家: ' + aliveP + '/5', 20, 40);
+  uictx.fillStyle = '#8fa3c8'; uictx.font = '11px sans-serif';
+  uictx.fillText('按住 空格/鼠标 蓄力，松开发射（蓄力时移速降低）', 20, 62);
+  uictx.restore();
+}
+
+/* ============ 主绘制 ============ */
+function draw() {
+  var th = BOARD_THEMES[curTheme];
+  var sk = curSkinObj;
+  ctx.clearRect(0, 0, W, H);
+
+  // 版图背景：底色 + 中央区域 + 轨道环 + 边缘装饰
+  var g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, th.bg); g.addColorStop(1, th.bg2);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  drawCenter(th);
+  drawRings(th);
+  drawDeco(th);
+
+  // 地面印记/粒子/冲击环/标枪：3D模式下改由3D镜像层渲染；
+  // USE3D关闭、未开局或结算时 fig3dOn()=false → 自动恢复2D绘制（完整可玩降级）
+  var i;
+  var fx3d = fig3dOn();
+  if (!fx3d) {
+    // 地面印记（命中残留）
+    for (i = 0; i < spots.length; i++) drawSpot(spots[i]);
+
+    // 粒子
+    for (i = 0; i < particles.length; i++) {
+      var pt = particles[i];
+      ctx.globalAlpha = clamp(pt.life / pt.max, 0, 1);
+      ctx.fillStyle = pt.color;
+      ctx.beginPath(); ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    // 冲击环
+    for (i = 0; i < rings.length; i++) {
+      var rg = rings[i];
+      ctx.globalAlpha = clamp(rg.life / rg.max, 0, 1) * 0.7;
+      ctx.strokeStyle = rg.color; ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+
+    // 回血道具（3D模式改由3D镜像层绘制 → 不在2D层重复画）
+    for (i = 0; i < healItems.length; i++) drawHealItem2D(healItems[i]);
+    for (i = 0; i < powerItems.length; i++) drawPowerItem2D(powerItems[i]);
+
+    // 标枪
+    for (i = 0; i < spears.length; i++) drawSpear(spears[i]);
+  }
+
+  // 阵营（地面光环等2D层）
+  for (i = 0; i < factions.length; i++) drawFaction(factions[i], sk);
+}
+
+/* ============ 顶层UI绘制（血条/字母/满蓄力/蓄力条/飘字/HUD/结算/画中画框） ============ */
+function drawFactionUI(f, sk) {
+  if (f.isNeutral && f.defeated) return;
+  if (!f.alive) return;
+  var cr = 0;
+  if (f.isPlayer && isCharging) cr = clamp(chargeTime / CFG.maxChargeTime, 0, 1);
+  else if (f.charging) cr = clamp(f.chargeT / CFG.maxChargeTime, 0, 1);
+  var t3 = fig3dOn();
+  var fpSelf = fpOn() && f.isPlayer;    // FP下自体小人隐藏，HUD改画在准星/底部
+  var topY = t3 ? f3dTop(f) : 0;
+  if (t3 && topY === null && !fpSelf) return;   // 相机背后：不画该小人HUD
+  // 3D模式：字母+血条由头顶Sprite实时跟随模型绘制（含画中画），此处只兜底2D/FP自体
+  var sprUI = t3 && !fpSelf && r3d.figs[f.id] && r3d.figs[f.id].hp;
+
+  // 满蓄力提示文字（3D模式抬到小人头顶上方；FP自体在准星上方）
+  if (cr >= 1) {
+    var pulse = 0.5 + 0.5 * Math.sin(nowT * 14);
+    uictx.globalAlpha = 0.6 + 0.4 * pulse;
+    uictx.fillStyle = '#ffff66'; uictx.font = 'bold 11px sans-serif';
+    uictx.textAlign = 'center'; uictx.textBaseline = 'middle';
+    uictx.fillText('满蓄力!', fpSelf ? W / 2 : f.x,
+      fpSelf ? H / 2 - 46 : (t3 ? topY - 44 : f.y - CFG.towerR - 26));
+    uictx.globalAlpha = 1;
+  }
+
+  // 阵营字母（3D模式由头顶Sprite绘制；FP自体不画）
+  if (!fpSelf && !sprUI) {
+    uictx.fillStyle = '#fff'; uictx.font = 'bold 14px sans-serif';
+    uictx.textAlign = 'center'; uictx.textBaseline = 'middle';
+    uictx.fillText(f.letter, f.x, t3 ? topY - 18 : f.y + 1);
+  }
+
+  // 血条（3D模式由头顶Sprite绘制；FP自体：底部中央）—— 进度条样式：刻度 + 红色掉血残影
+  if (!sprUI) {
+    var barW = 50, barH = 6;
+    var barX = fpSelf ? W / 2 - barW / 2 : f.x - barW / 2;
+    var barY = fpSelf ? H - 44 : (t3 ? topY - 30 : f.y - CFG.towerR - 14);
+    if (f.hpGhost === undefined || f.hp >= f.hpGhost) f.hpGhost = f.hp;
+    else {
+      f.hpGhost -= f.maxHp / 30;               // 残影约 0.5 秒排空（60fps）
+      if (f.hpGhost < f.hp) f.hpGhost = f.hp;
+    }
+    drawHpBar(uictx, barX, barY, barW, barH, f.hp / f.maxHp, f.hpGhost / f.maxHp,
+      f.hp > 30 ? f.color : '#ff3333');
+  }
+
+  // 玩家蓄力条（FP自体：准星正下方）
+  if (f.isPlayer && isCharging) {
+    var chX = fpSelf ? W / 2 - 30 : f.x - 30;
+    var chY = fpSelf ? H / 2 + 26 : f.y + CFG.towerR + 8;
+    uictx.fillStyle = 'rgba(0,0,0,0.5)'; uictx.fillRect(chX, chY, 60, 8);
+    uictx.fillStyle = cr >= 1 ? '#ffff44' : '#ff6b6b';
+    uictx.fillRect(chX, chY, 60 * cr, 8);
+    uictx.strokeStyle = 'rgba(255,255,255,0.3)'; uictx.lineWidth = 1;
+    uictx.strokeRect(chX, chY, 60, 8);
+  }
+}
+
+function drawUI() {
+  uictx.clearRect(0, 0, W, H);
+  if (!started) return;
+  var i;
+  // 3D模式：小窗区域挖空（even-odd 裁剪），血条/字母/飘字不覆盖画中画
+  var clipPIP = USE3D && !gameOver;
+  if (clipPIP) {
+    uictx.save();
+    var cp = new Path2D();
+    cp.rect(0, 0, W, H);
+    cp.rect(PIP.x, PIP.y, PIP.w, PIP.h);
+    uictx.clip(cp, 'evenodd');
+  }
+  for (i = 0; i < factions.length; i++) drawFactionUI(factions[i], curSkinObj);
+
+  // 飘字（FP模式：2D版图坐标 → 世界 → FP相机投影，背后则跳过）
+  for (i = 0; i < floaters.length; i++) {
+    var fl = floaters[i];
+    var fx = fl.x, fy = fl.y;
+    if (fpOn()) {
+      var fw = pxToGround(fl.x, fl.y);
+      var fs = worldToPx(fw.x, 45, fw.z);
+      if (fs.behind) continue;
+      fx = fs.x; fy = fs.y;
+    }
+    uictx.globalAlpha = clamp(fl.life / fl.max, 0, 1);
+    uictx.fillStyle = fl.color; uictx.font = 'bold 13px sans-serif';
+    uictx.textAlign = 'center'; uictx.textBaseline = 'middle';
+    uictx.fillText(fl.text, fx, fy);
+  }
+  uictx.globalAlpha = 1;
+  if (clipPIP) uictx.restore();
+
+  // 第一人称准星 + 未锁定提示
+  if (fpOn()) {
+    var cx = W / 2, cy = H / 2;
+    uictx.save();
+    uictx.strokeStyle = 'rgba(255,255,255,0.92)'; uictx.lineWidth = 2;
+    uictx.beginPath();
+    uictx.moveTo(cx - 13, cy); uictx.lineTo(cx - 4, cy);
+    uictx.moveTo(cx + 4, cy); uictx.lineTo(cx + 13, cy);
+    uictx.moveTo(cx, cy - 13); uictx.lineTo(cx, cy - 4);
+    uictx.moveTo(cx, cy + 4); uictx.lineTo(cx, cy + 13);
+    uictx.stroke();
+    uictx.fillStyle = 'rgba(255,255,255,0.95)';
+    uictx.beginPath(); uictx.arc(cx, cy, 1.8, 0, Math.PI * 2); uictx.fill();
+    if (document.pointerLockElement !== canvas) {
+      uictx.fillStyle = 'rgba(255,255,255,0.8)'; uictx.font = '13px sans-serif';
+      uictx.textAlign = 'center'; uictx.textBaseline = 'middle';
+      uictx.fillText('移动鼠标转动视角 · 点击锁定 · F 切换俯视', W / 2, H - 26);
+    }
+    uictx.restore();
+  }
+
+  drawHUD();
+
+  // 画中画边框（3D模式且对局进行中）
+  if (USE3D && !gameOver) {
+    uictx.strokeStyle = 'rgba(255,255,255,0.7)'; uictx.lineWidth = 2;
+    uictx.strokeRect(PIP.x + 1, PIP.y + 1, PIP.w - 2, PIP.h - 2);
+    uictx.fillStyle = 'rgba(255,255,255,0.9)'; uictx.font = 'bold 11px sans-serif';
+    uictx.textAlign = 'left'; uictx.textBaseline = 'top';
+    uictx.fillText('俯视', PIP.x + 7, PIP.y + 6);
+  }
+
+  // 结算画面
+  if (gameOver) {
+    uictx.fillStyle = 'rgba(0,0,0,0.7)'; uictx.fillRect(0, 0, W, H);
+    uictx.textAlign = 'center'; uictx.textBaseline = 'middle';
+    if (winReason === 'capture') {
+      uictx.fillStyle = '#44ff77'; uictx.font = 'bold 44px sans-serif';
+      uictx.fillText('你赢了！', W / 2, H / 2 - 40);
+      uictx.fillStyle = '#ffffff'; uictx.font = 'bold 22px sans-serif';
+      uictx.fillText('占领全部中立阵营', W / 2, H / 2 + 4);
+    } else if (winReason === 'last') {
+      uictx.fillStyle = '#44ff77'; uictx.font = 'bold 44px sans-serif';
+      uictx.fillText('你赢了！', W / 2, H / 2 - 40);
+      uictx.fillStyle = '#ffffff'; uictx.font = 'bold 22px sans-serif';
+      uictx.fillText('最后存活', W / 2, H / 2 + 4);
+    } else if (winReason === 'dead') {
+      uictx.fillStyle = '#ff5555'; uictx.font = 'bold 40px sans-serif';
+      uictx.fillText('你被淘汰了', W / 2, H / 2 - 46);
+      if (winner) {
+        uictx.fillStyle = '#ffffff'; uictx.font = 'bold 24px sans-serif';
+        uictx.fillText(winner.name + ' 领先', W / 2, H / 2 + 4);
+      }
+    } else {
+      uictx.fillStyle = '#ffcc66'; uictx.font = 'bold 40px sans-serif';
+      uictx.fillText('平局', W / 2, H / 2 - 30);
+    }
+    uictx.fillStyle = '#cccccc'; uictx.font = '18px sans-serif';
+    uictx.fillText('点击任意位置返回主菜单', W / 2, H / 2 + 60);
+  }
+}
+
+/* ============ 3D 乐高人物层（叠加在2D画布之上，只画小人；任何异常自动降级纯2D） ============ */
+var USE3D = false;
+var r3d = null;
+var r3dErrs = 0;
+var r3dDown = false;      // 3D临时降级中：冷却结束后自动重试恢复（不再永久卡2D）
+var r3dRetryT = 0;        // 下次重试时刻（Date.now 毫秒）
+var r3dInitTries = 0;     // init3D 启动重试次数
+// 3D异常连续超限 → 临时切2D兜底，5秒后自动重试；2D模式期间游戏照常可玩
+function downgrade3D() {
+  USE3D = false; r3dDown = true;
+  r3dRetryT = Date.now() + 5000;
+  try { if (r3d && r3d.canvas) r3d.canvas.style.visibility = 'hidden'; } catch (e) {}
+}
+
+function fig3dOn() { return USE3D && r3d && started && !gameOver; }
+
+/* 屏幕像素 → 地面(y=0)世界坐标：保证小人脚底精确落在2D坐标上 */
+function pxToGround(px, py) {
+  var v = new THREE.Vector3(px / W * 2 - 1, -(py / H * 2 - 1), 0.5);
+  v.unproject(r3d.cam);
+  v.sub(r3d.cam.position).normalize();
+  var t = -r3d.cam.position.y / v.y;
+  return { x: r3d.cam.position.x + v.x * t, z: r3d.cam.position.z + v.z * t };
+}
+/* 安全版：视线以上（射线不与地面相交，t<=0）返回 null，避免算出相机后方的假点 */
+function pxToGroundSafe(px, py) {
+  var v = new THREE.Vector3(px / W * 2 - 1, -(py / H * 2 - 1), 0.5);
+  v.unproject(r3d.cam);
+  v.sub(r3d.cam.position).normalize();
+  var t = -r3d.cam.position.y / v.y;
+  if (!(t > 0) || !isFinite(t)) return null;
+  return { x: r3d.cam.position.x + v.x * t, z: r3d.cam.position.z + v.z * t };
+}
+/* 标枪世界直线：手部起点 → 目标落点（落点在地平线以上时沿轨迹近点方向外推，保持共线） */
+function spearLine3D(a) {
+  var x0 = (a.x0 === undefined || a.x0 === null) ? a.x : a.x0;
+  var y0 = (a.y0 === undefined || a.y0 === null) ? a.y : a.y0;
+  var g0 = pxToGround(x0, y0);
+  a.wx0 = g0.x; a.wz0 = g0.z;
+  var T = a.maxLife || CFG.spearLife;
+  var gE = pxToGroundSafe(x0 + a.vx * T, y0 + a.vy * T);
+  if (!gE) {
+    var f2 = 0.2;
+    var gN = pxToGround(x0 + a.vx * T * f2, y0 + a.vy * T * f2);
+    gE = { x: a.wx0 + (gN.x - a.wx0) / f2, z: a.wz0 + (gN.z - a.wz0) / f2 };
+  }
+  a.lx = gE.x; a.lz = gE.z;
+  a.spanW = Math.hypot(a.lx - a.wx0, a.lz - a.wz0) || 1;
+}
+/* 世界坐标 → 屏幕像素：血条/字母对齐小人头顶
+   cam 可选：不传时用当前视图相机（FP用fpCam，俯视用TP相机）；FP瞄准换算必须显式传 r3d.cam */
+function worldToPx(x, y, z, cam) {
+  cam = cam || ((fpMode && r3d && r3d.fpCam) ? r3d.fpCam : r3d.cam);
+  var v = new THREE.Vector3(x, y, z).project(cam);
+  return { x: (v.x + 1) / 2 * W, y: (1 - v.y) / 2 * H, behind: v.z > 1 };
+}
+function f3dTop(f) {
+  var st = r3d.figs[f.id];
+  if (st && st.grp.visible) {
+    var p = worldToPx(st.grp.position.x, 80 * (st.grp.scale.y || 1), st.grp.position.z);
+    if (p.behind) return null;   // FP相机背后：调用方跳过该HUD
+    return p.y;
+  }
+  return f.y - 66;
+}
+
+/* ===== 第一人称相机 ===== */
+function fpOn() { return fpMode && USE3D && r3d && started && !gameOver; }
+/* 进入FP时：由当前2D瞄准角反推相机yaw（保持所见即所掷连续） */
+function fpSyncYaw(p) {
+  var gp = pxToGround(p.x, p.y);
+  var ga = pxToGround(p.x + Math.cos(p.angle) * 30, p.y + Math.sin(p.angle) * 30);
+  var dirx = ga.x - gp.x, dirz = ga.z - gp.z;
+  if (dirx * dirx + dirz * dirz > 0.0001) fpYaw = Math.atan2(-dirx, -dirz);
+  fpPitch = -0.1;
+}
+/* 每帧：摆好fpCam → 中心射线打地面 → 世界点反投影成2D版图像素 → 写入mouseX/Y
+   这样 update() 里原有 atan2(mouseY-p.y, mouseX-p.x) 与 firePlayerSpear 零改动 */
+function fpUpdateCamAim(p) {
+  var cam = r3d.fpCam;
+  var eye = isCrouch ? FP_EYE * CROUCH_SCALE : FP_EYE;   // 蹲下：视线/相机高度降低
+  var gp = pxToGround(p.x, p.y);
+  cam.position.set(gp.x, eye, gp.z);
+  cam.rotation.set(fpPitch, fpYaw, 0);
+  cam.updateMatrixWorld(true);
+  var dir = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
+  if (dir.y > -0.004) dir.y = -0.004;   // 抬头时按最远地面处理（视线尽头=版图边缘）
+  var t = eye / (-dir.y);
+  var hx = gp.x + dir.x * t, hz = gp.z + dir.z * t;
+  // 钳进版图包围盒：沿射线水平方向整体缩回（方位角不变 → 瞄准方向精确）
+  var b = r3d.brd;
+  var ex = hx - gp.x, ez = hz - gp.z;
+  var s = 1, q;
+  if (hx < b.minX && Math.abs(ex) > 1e-9) { q = (b.minX - gp.x) / ex; if (q > 0 && q < s) s = q; }
+  if (hx > b.maxX && Math.abs(ex) > 1e-9) { q = (b.maxX - gp.x) / ex; if (q > 0 && q < s) s = q; }
+  if (hz < b.minZ && Math.abs(ez) > 1e-9) { q = (b.minZ - gp.z) / ez; if (q > 0 && q < s) s = q; }
+  if (hz > b.maxZ && Math.abs(ez) > 1e-9) { q = (b.maxZ - gp.z) / ez; if (q > 0 && q < s) s = q; }
+  if (s < 0.02) s = 0.02;
+  if (s < 1) { hx = gp.x + ex * s; hz = gp.z + ez * s; }
+  var scr = worldToPx(hx, 0, hz, r3d.cam);   // 世界 → 2D版图像素（TP映射相机）
+  mouseX = scr.x; mouseY = scr.y;
+}
+
+/* ===== 第一人称手臂+标枪 rig（挂在fpCam下，layer3 仅FP相机渲染；俯视/画中画相机看不到） =====
+   相机空间坐标（FOV62°/aspect1.5 推算）：肩轴(10,-8,-14)在画面下缘右侧，
+   蓄力时手位约(16,-2,-26)=画面中右，枪尖出画面上缘、枪尾出下缘 —— 均在视锥内。 */
+function buildFPRig() {
+  var rig = new THREE.Group();
+  var mSleeve = new THREE.MeshStandardMaterial({ color: 0x2f6fd0, roughness: 0.3, metalness: 0 });
+  var mSkin = new THREE.MeshStandardMaterial({ color: 0xffcc33, roughness: 0.3, metalness: 0 });
+  var mShaft = new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.3, metalness: 0 });
+  var mTip = new THREE.MeshStandardMaterial({ color: 0x8a7a5a, roughness: 0.3, metalness: 0 });
+  function box(w, h, d, mat, x, y, z) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x || 0, y || 0, z || 0);
+    return m;
+  }
+  // 右臂：肩轴在下缘，手臂沿 -z 前伸（旋转抬到画面中右 = 举枪）
+  var armR = new THREE.Group();
+  armR.position.set(10, -8, -14);
+  armR.add(box(6.5, 6.5, 9, mSleeve, 0, 0, -4.5));
+  armR.add(box(5.2, 5.2, 7, mSleeve, 0, 0, -11));
+  armR.add(box(5, 4.5, 5, mSkin, 0, 0.3, -15));     // 手
+  rig.add(armR);
+  // 标枪：握点为原点，枪身沿 +y，枪尖 +46，枪尾 -26（局部转轴在握点）
+  var jg = new THREE.Group();
+  jg.add(box(2.2, 72, 2.2, mShaft, 0, 10, 0));
+  var tip = new THREE.Mesh(new THREE.ConeGeometry(2.6, 9, 4), mTip);
+  tip.position.set(0, 50.5, 0);
+  jg.add(tip);
+  jg.add(box(3.4, 5, 3.4, mTip, 0, -28, 0));        // 枪尾
+  rig.add(jg);
+  rig.traverse(function (o) { o.layers.set(3); });  // 每个物体挂 layer3
+  r3d.fpCam.add(rig);
+  r3d.fpCam.layers.enable(3);
+  r3d.fpRig = { grp: rig, armR: armR, jg: jg,
+                mSleeve: mSleeve, mShaft: mShaft, mTip: mTip,
+                ax: 0.10, ay: -0.535, jx: -0.75, jz: -0.25,
+                gp: { x: 16, y: -7, z: -24 }, jav: true,
+                col: null, skin: null };
+  return r3d.fpRig;
+}
+
+/* 每帧姿态：待机呼吸 → 蓄力渐进专业拉满姿（满蓄力微颤）→ 0.3s 甩枪出手 */
+function updateFPRig(dt) {
+  var rg = (r3d && r3d.fpRig) ? r3d.fpRig : null;
+  if (!rg) return;
+  var p = factions[0];
+  // 颜色同步：袖=阵营色，枪=玩家皮肤（皮肤只作用于玩家）
+  if (p && p.color !== rg.col) { rg.mSleeve.color.set(p.color); rg.col = p.color; }
+  if (curSkinObj !== rg.skin) {
+    rg.mShaft.color.set(curSkinObj.body);
+    rg.mTip.color.set(curSkinObj.tip);
+    rg.skin = curSkinObj;
+  }
+  var cr = (p && p.alive && isCharging) ? clamp(chargeTime / CFG.maxChargeTime, 0, 1) : 0;
+  // 目标姿态（肩x/y、枪x/z、握点位置、枪是否在手）
+  var tAx, tAy, tJx, tJz, tgx, tgy, tgz, tJav = true;
+  if (fpThrowT > 0) {
+    fpThrowT -= dt;
+    var ph = 1 - clamp(fpThrowT, 0, 0.3) / 0.3;    // 0→1（0.3s 甩枪）
+    if (ph < 0.45) {
+      var w = ph / 0.45;                           // 后引蓄势
+      tAx = 0.467 + w * 0.15; tAy = -0.423 + w * 0.06;
+      tJx = -0.90 + w * 0.30; tJz = -0.30 - w * 0.04;
+      tgx = 16; tgy = -2 + w * 1.5; tgz = -26 + w * 5;
+    } else {                                       // 前挥出手
+      var s = (ph - 0.45) / 0.55;
+      tAx = 0.617 - s * 1.17; tAy = -0.363 + s * 0.06;
+      tJx = -0.60 - s * 0.5; tJz = -0.34 + s * 0.1;
+      tgx = 16; tgy = -0.5 - s * 3; tgz = -21 - s * 6;
+      tJav = ph < 0.56;                            // 出手后隐藏（世界标枪已飞出）
+    }
+  } else if (cr > 0) {
+    var k = Math.min(1, cr * 1.2);                 // 蓄力渐进到专业拉满姿
+    tAx = 0.10 + 0.367 * k; tAy = -0.535 + 0.112 * k;
+    tJx = -0.75 - 0.15 * k; tJz = -0.25 - 0.05 * k;
+    tgx = 16; tgy = -7 + 5 * k; tgz = -24 - 2 * k;
+    if (cr >= 1) {                                 // 满蓄力微颤
+      tAx += (Math.random() - 0.5) * 0.05;
+      tJx += (Math.random() - 0.5) * 0.04;
+      tJz += (Math.random() - 0.5) * 0.03;
+    }
+  } else {                                         // 待机：呼吸轻摆
+    var br = Math.sin(nowT * 1.7) * 0.02;
+    tAx = 0.10 + br; tAy = -0.535;
+    tJx = -0.75 + br; tJz = -0.25;
+    tgx = 16; tgy = -7 + br * 0.5; tgz = -24;
+  }
+  // 甩枪跟手（快），平时阻尼过渡
+  var f = Math.min(1, dt * (fpThrowT > 0 ? 45 : 12));
+  rg.ax += (tAx - rg.ax) * f; rg.ay += (tAy - rg.ay) * f;
+  rg.jx += (tJx - rg.jx) * f; rg.jz += (tJz - rg.jz) * f;
+  rg.gp.x += (tgx - rg.gp.x) * f;
+  rg.gp.y += (tgy - rg.gp.y) * f;
+  rg.gp.z += (tgz - rg.gp.z) * f;
+  rg.armR.rotation.set(rg.ax, rg.ay, 0);
+  rg.jg.position.set(rg.gp.x, rg.gp.y, rg.gp.z);
+  rg.jg.rotation.set(rg.jx, 0, rg.jz);
+  rg.jg.visible = tJav && fpOn();
+  // 满蓄力：枪尖脉冲发光
+  var pulse = (cr >= 1) ? 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(nowT * 14)) : 0;
+  rg.mTip.emissive.setRGB(pulse, pulse * 0.85, pulse * 0.6);
+}
+
+/* 拼装乐高小人（纯几何体，零外部模型）：腿/胯/躯干/手臂/手/圆柱头+顶钉 */
+function buildMinifig(colorHex) {
+  var g = new THREE.Group();
+  g.rotation.order = 'YXZ';
+  var col = new THREE.Color(colorHex);
+  var mBody = new THREE.MeshStandardMaterial({ color: col, roughness: 0.3, metalness: 0 });
+  var mSkin = new THREE.MeshStandardMaterial({ color: 0xffcc33, roughness: 0.3, metalness: 0 });
+  var mDark = new THREE.MeshStandardMaterial({ color: 0x23262e, roughness: 0.3, metalness: 0 });
+  var mLeg = new THREE.MeshStandardMaterial({ color: col.clone().multiplyScalar(0.72), roughness: 0.3, metalness: 0 });
+  function box(w, h, d, mat, x, y, z) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x || 0, y || 0, z || 0);
+    return m;
+  }
+  function sph(r, mat, x, y, z) {   // 球形关节
+    var m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 10), mat);
+    m.position.set(x || 0, y || 0, z || 0);
+    return m;
+  }
+  function cyl(r, h, mat, x, y, z, seg) {   // 圆柱关节/环
+    var m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, seg || 14), mat);
+    m.position.set(x || 0, y || 0, z || 0);
+    return m;
+  }
+  function torusHand(mat, x, y, z) {   // 乐高C形手（圆环开口朝前）
+    var m = new THREE.Mesh(new THREE.TorusGeometry(2.4, 1.3, 8, 14, Math.PI * 1.55), mat);
+    m.position.set(x, y, z);
+    m.rotation.z = Math.PI * 0.72;    // 开口朝上外侧
+    return m;
+  }
+  // 腿（髋为轴心，走路摆动）：膝关节缝深色环 + 脚跟
+  var legL = new THREE.Group(); legL.position.set(-5, 26, 0);
+  legL.add(box(9.5, 26, 15, mLeg, 0, -13, 0));
+  legL.add(box(9.5, 5, 19, mLeg, 0, -23.5, 2));      // 脚掌（前伸）
+  legL.add(box(9.5, 4, 5, mLeg, 0, -24, -7));        // 脚跟
+  legL.add(box(9.9, 1.6, 15.6, mDark, 0, -13, 0));   // 膝关节缝（深色环）
+  var legR = new THREE.Group(); legR.position.set(5, 26, 0);
+  legR.add(box(9.5, 26, 15, mLeg, 0, -13, 0));
+  legR.add(box(9.5, 5, 19, mLeg, 0, -23.5, 2));
+  legR.add(box(9.5, 4, 5, mLeg, 0, -24, -7));
+  legR.add(box(9.9, 1.6, 15.6, mDark, 0, -13, 0));
+  g.add(legL); g.add(legR);
+  // 上身（起伏/前倾整组动）
+  var body = new THREE.Group();
+  body.add(box(22, 7, 15, mLeg, 0, 29.5, 0));        // 胯
+  body.add(box(22.5, 3, 15.5, mDark, 0, 34, 0));     // 腰带（深色，略宽出躯干）
+  body.add(box(21, 26, 13, mBody, 0, 46, 0));        // 躯干（阵营色）
+  var neck = cyl(4.6, 4.5, mSkin, 0, 60, 0);         // 颈关节（头抬高后露出）
+  body.add(neck);
+  var head = new THREE.Mesh(new THREE.CylinderGeometry(9, 9, 15, 20), mSkin);
+  head.position.set(0, 69.5, 0); body.add(head);     // 头（59→62..77，颈部可见）
+  var stud = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 3, 16), mSkin);
+  stud.position.set(0, 78.5, 0); body.add(stud);     // 顶钉（77..80=头顶）
+  var band = cyl(9.5, 2.5, mBody, 0, 74, 0);         // 头带（幻影忍者风，阵营色）
+  body.add(band);
+  // 脸（朝 +Z）
+  var fe1 = box(2.6, 3, 1.6, mDark, -3.2, 71.5, 8.6);
+  var fe2 = box(2.6, 3, 1.6, mDark, 3.2, 71.5, 8.6);
+  var fe3 = box(7, 2, 1.6, mDark, 0, 65.5, 8.6);
+  body.add(fe1); body.add(fe2); body.add(fe3);
+  // 肩球关节（固定在躯干侧，手臂在其下摆动）
+  body.add(sph(4.6, mBody, -11.8, 55, 0));
+  body.add(sph(4.6, mBody, 11.8, 55, 0));
+  // 手臂（右臂投掷/蓄力）：上臂+肘缝+腕环+C形手
+  var armL = new THREE.Group(); armL.position.set(-11.8, 55, 0);
+  armL.rotation.z = 0.18;
+  armL.add(box(7, 17, 7, mBody, 0, -8.5, 0));
+  armL.add(box(7.6, 1.8, 7.6, mDark, 0, -9, 0));     // 肘关节缝
+  armL.add(box(8, 2, 8, mBody, 0, -16.5, 0));        // 腕环（宽出手臂）
+  armL.add(box(5.5, 6, 5.5, mSkin, 0, -19, 1));      // 手掌
+  armL.add(torusHand(mSkin, 0, -23, 1));             // C形指环
+  var armR = new THREE.Group(); armR.position.set(11.8, 55, 0);
+  armR.rotation.z = -0.18;
+  armR.add(box(7, 17, 7, mBody, 0, -8.5, 0));
+  armR.add(box(7.6, 1.8, 7.6, mDark, 0, -9, 0));
+  armR.add(box(8, 2, 8, mBody, 0, -16.5, 0));
+  armR.add(box(5.5, 6, 5.5, mSkin, 0, -19, 1));
+  armR.add(torusHand(mSkin, 0, -23, 1));
+  body.add(armL); body.add(armR);
+  g.add(body);
+  return { grp: g, body: body, legL: legL, legR: legR, armL: armL, armR: armR,
+           headParts: [head, stud, band, fe1, fe2, fe3],
+           mBody: mBody, mSkin: mSkin, mLeg: mLeg, col: col };
+}
+
+/* 头顶血条：3D Sprite（字母+血条画进画布，自动面向当前相机 → 俯视/第一人称/画中画都跟随模型） */
+function makeHpSprite() {
+  var cv = document.createElement('canvas');
+  cv.width = 96; cv.height = 48;
+  var c = cv.getContext('2d');
+  var tex = new THREE.CanvasTexture(cv);
+  var spr = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: true }));
+  return { ctx: c, tex: tex, spr: spr, key: '' };
+}
+/* 进度条样式血条（共享）：底槽 → 当前血量 → 掉血残影（红） → 0/25/50/75刻度 → 白边框
+   ratio=当前血量占比，ghostRatio=掉血残影占比(≥ratio，动画排空中)，color=当前血填充色 */
+function drawHpBar(ctx, x, y, w, h, ratio, ghostRatio, color) {
+  ratio = clamp(ratio, 0, 1);
+  ghostRatio = clamp(ghostRatio, ratio, 1);
+  var iw = w - 2, ih = h - 2;                 // 内部填充区
+  ctx.fillStyle = 'rgba(0,0,0,0.55)';         // 底槽
+  ctx.fillRect(x, y, w, h);
+  if (ghostRatio > ratio) {                   // 掉血残影：红色（当前血→受伤前血量）
+    ctx.fillStyle = '#ff2b2b';
+    ctx.fillRect(x + 1 + iw * ratio, y + 1, iw * (ghostRatio - ratio), ih);
+  }
+  ctx.fillStyle = color;                      // 当前血量
+  ctx.fillRect(x + 1, y + 1, iw * ratio, ih);
+  // 刻度标记：0/25/50/75 处白色竖线，上下各突出 2px
+  ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (var t = 0; t <= 3; t++) {
+    var tx = Math.round(x + w * (t / 4)) + 0.5;
+    ctx.moveTo(tx, y - 2);
+    ctx.lineTo(tx, y + h + 2);
+  }
+  ctx.stroke();
+  ctx.strokeStyle = 'rgba(255,255,255,0.75)'; // 边框
+  ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+}
+function updateHpSprite(hp, f, dt) {
+  var fill = f.hp > 30 ? f.color : '#ff3333';
+  // 掉血残影：受击时出现在掉血区间，约 0.5 秒内排空；回血则直接贴齐
+  if (hp.ghost === undefined || f.hp >= hp.ghost) hp.ghost = f.hp;
+  else {
+    hp.ghost -= f.maxHp * 2 * (dt || 0.016);
+    if (hp.ghost < f.hp) hp.ghost = f.hp;
+  }
+  var key = f.letter + '|' + f.hp + '/' + f.maxHp + '|' + fill + '|' + Math.round(hp.ghost * 48);
+  if (hp.key === key) return;
+  hp.key = key;
+  var c = hp.ctx;
+  c.clearRect(0, 0, 96, 48);
+  // 血条（上排）：刻度 + 红色掉血残影
+  drawHpBar(c, 4, 3, 88, 14, f.hp / f.maxHp, hp.ghost / f.maxHp, fill);
+  // 阵营字母（下排，白字黑边）
+  c.font = 'bold 24px sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.lineWidth = 4; c.strokeStyle = 'rgba(0,0,0,0.8)';
+  c.strokeText(f.letter, 48, 33);
+  c.fillStyle = '#ffffff';
+  c.fillText(f.letter, 48, 33);
+  hp.tex.needsUpdate = true;
+}
+
+function makeFig3D(f) {
+  var fig = buildMinifig(f.color);
+  r3d.scene.add(fig.grp);
+  // 头顶血条精灵（宽度≈2D版50px 换算成世界单位）
+  fig.hp = makeHpSprite();
+  var hw = 56 * (r3d.w2p || 1);
+  fig.hp.spr.scale.set(hw, hw * 0.5, 1);              // 画布96×48 → 高=宽/2
+  fig.hp.spr.position.set(0, 82 + hw * 0.25, 0);      // 底边悬在头顶(80)上方
+  fig.grp.add(fig.hp.spr);
+  var minis = [], mi;
+  for (var m = 0; m < 3; m++) {
+    mi = buildMinifig(f.color);
+    mi.grp.scale.setScalar(0.42);
+    mi.grp.visible = false;
+    r3d.scene.add(mi.grp);
+    minis.push(mi);
+  }
+  fig.minis = minis;
+  fig.px = f.x; fig.py = f.y;
+  fig.walk = 0; fig.gait = 0;
+  fig.throwT = 0; fig.dieT = -1;
+  fig.color = f.color;
+  return fig;
+}
+
+function kickThrow3D(fid) {
+  if (!USE3D || !r3d) return;
+  var st = r3d.figs[fid];
+  if (st) st.throwT = 0.42;
+  if (fid === 0) fpThrowT = 0.3;   // FP手臂rig同步甩枪（0.3s：前挥0.15s+收势）
+}
+
+function updateFig3D(f, dt) {
+  var st = r3d.figs[f.id];
+  if (!st || st.color !== f.color) {
+    if (st) r3d.scene.remove(st.grp);
+    st = makeFig3D(f);
+    r3d.figs[f.id] = st;
+  }
+  var g = st.grp;
+  // 脚底精确落点 + 朝向（2D角度反投影到地面）
+  var gp = pxToGround(f.x, f.y);
+  var dx = f.x - st.px, dy = f.y - st.py;
+  var dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > 60) dist = 0;                 // 新一局：跳过走路动画
+  st.px = f.x; st.py = f.y;
+  g.position.set(gp.x, 0, gp.z);
+  var gp2 = pxToGround(f.x + Math.cos(f.angle) * 30, f.y + Math.sin(f.angle) * 30);
+  var dirx = gp2.x - gp.x, dirz = gp2.z - gp.z;
+  if (dirx * dirx + dirz * dirz > 0.0001) g.rotation.y = Math.atan2(dirx, dirz);
+
+  // 中立废墟：倒地残骸
+  if (f.isNeutral && f.defeated) {
+    g.visible = true;
+    if (st.hp) st.hp.spr.visible = false;
+    g.rotation.x = -1.5;
+    st.dieT = -1;
+    st.legL.rotation.x = 0.25; st.legR.rotation.x = -0.35;
+    st.armL.rotation.x = 0.7; st.armR.rotation.x = 0.5;
+    st.body.position.y = 0; st.body.rotation.x = 0; st.body.rotation.y = 0;
+    setEmit3D(st, 0);
+    hideMinis3D(st);
+    return;
+  }
+  // 阵亡：倒下后隐藏（2D侧也不再绘制）；dieT=-1 为初始态，>0 倒地中，其余为已隐藏
+  if (!f.alive) {
+    if (st.hp) st.hp.spr.visible = false;
+    if (st.dieT === -1) st.dieT = 0.5;
+    if (st.dieT > -0.25) {
+      st.dieT -= dt;
+      g.visible = st.dieT > -0.25;
+      g.rotation.x = -1.55 * (1 - Math.max(st.dieT, 0) / 0.5);
+      setEmit3D(st, 0);
+      hideMinis3D(st);
+    } else {
+      g.visible = false;
+      hideMinis3D(st);
+    }
+    return;
+  }
+  g.visible = true;
+  if (st.dieT !== -1) { st.dieT = -1; g.rotation.x = 0; g.rotation.z = 0; }
+  // 蹲下：模型高度缩至 CROUCH_SCALE（脚底贴地不动，头顶下降；血条在下方补偿）
+  var syT = isCrouchF(f) ? CROUCH_SCALE : 1;
+  g.scale.y += (syT - g.scale.y) * Math.min(1, dt * 12);
+  if (Math.abs(g.scale.y - syT) < 0.003) g.scale.y = syT;
+  // FP下保留自己的第三人称小人：身体随视角/瞄准转向（头部在相机内侧被背面剔除，不挡视野）
+
+  // 头顶血条：FP自体不画（自己的血在底部HUD），其余实时刷新
+  if (st.hp) {
+    st.hp.spr.visible = !(fpOn() && f.isPlayer);
+    if (st.hp.spr.visible) updateHpSprite(st.hp, f, dt);
+    // 血条跟随头顶高度，且不被模型纵向压缩（蹲下时补偿父级 scale.y）
+    var syH = g.scale.y || 1;
+    var hwH = st.hp.spr.scale.x;
+    st.hp.spr.position.y = (80 * syH + 2 + hwH * 0.25) / syH;
+    st.hp.spr.scale.y = (hwH * 0.5) / syH;
+  }
+
+  // 蓄力值（与2D绘制同源）
+  var cr = 0;
+  if (f.isPlayer && isCharging) cr = clamp(chargeTime / CFG.maxChargeTime, 0, 1);
+  else if (f.charging) cr = clamp(f.chargeT / CFG.maxChargeTime, 0, 1);
+
+  // 走路动画（幻影忍者定格风：相位量化成台阶，腿部根部交替前后摆）
+  st.gait += ((dist > 0.2 ? 1 : 0) - st.gait) * Math.min(1, dt * 9);
+  st.walk += dist * 0.16;
+  var qWalk = Math.round(st.walk / 0.35) * 0.35;           // 定格量化相位（顿帧感）
+  var crouching = !!isCrouchF(f);
+  var fixedPose = crouching || cr > 0 || st.throwT > 0;    // 蹲下/蓄力/投掷：锁腿
+  var lgA, lgB, lerpK;
+  if (fixedPose) {
+    if (crouching) { lgA = 0.3; lgB = -0.3; }              // 忍者下蹲固定姿（前后分腿）
+    else { lgA = 0.26; lgB = -0.26; }                      // 蓄力/投掷准备固定姿
+    lerpK = Math.min(1, dt * 18);                          // 立刻停摆（快速过渡）
+  } else {
+    lgA = Math.sin(qWalk) * 0.5 * st.gait;                 // 摆幅收小，避免乐高腿穿模
+    lgB = -lgA;
+    lerpK = Math.min(1, dt * 18);
+  }
+  st.legL.rotation.x += (lgA - st.legL.rotation.x) * lerpK;
+  st.legR.rotation.x += (lgB - st.legR.rotation.x) * lerpK;
+  st.legL.rotation.z = 0; st.legR.rotation.z = 0;
+  // 躯干律动：仅摆腿时踩地起伏（定格台阶感），固定姿归零
+  var bobT = fixedPose ? 0 : Math.abs(Math.sin(qWalk)) * 2 * st.gait;
+  st.body.position.y += (bobT - st.body.position.y) * Math.min(1, dt * 14);
+  st.body.rotation.x = 0;
+  // 手臂联动：随腿轻微交替摆（肘部靠构造时 rotation.z=±0.18 保持弯曲）
+  var armSwing = Math.sin(qWalk) * 0.3 * st.gait;
+
+  // 右臂：投掷 > 蓄力 > 摆臂
+  if (st.throwT > 0) {
+    st.throwT -= dt;
+    var p = 1 - Math.max(st.throwT, 0) / 0.42;
+    st.armR.rotation.x = 2.5 - p * 3.9;
+    st.body.rotation.y = 0.35 - p * 0.7;
+  } else if (cr > 0) {
+    st.armR.rotation.x = -0.35 - cr * 1.0;
+    st.body.rotation.y = 0;
+    st.body.rotation.x = -0.1 * cr;
+  } else {
+    var aRt = fixedPose ? 0 : armSwing;                    // 固定姿手臂归位
+    st.armR.rotation.x += (aRt - st.armR.rotation.x) * Math.min(1, dt * 12);
+    st.body.rotation.y = 0;
+  }
+  if (st.throwT <= 0 && cr <= 0) {
+    var aLt = fixedPose ? 0.25 : -armSwing;                // 固定姿左手护势
+    st.armL.rotation.x += (aLt - st.armL.rotation.x) * Math.min(1, dt * 12);
+  } else st.armL.rotation.x = 0.25;
+  // FP下自己的小人：手臂静置（挥臂由FP rig承担，避免双臂）+ 隐藏头/顶钉/脸
+  // （相机在头内：脸盒背面朝相机仍会渲染成悬浮黑块，头圆柱靠背面剔除但也一并隐藏保险）
+  if (st.headParts) {
+    var hideHead = fpOn() && f.isPlayer;
+    if (st.headParts[0].visible === hideHead) {
+      for (var hp = 0; hp < st.headParts.length; hp++) st.headParts[hp].visible = !hideHead;
+    }
+    if (hideHead) { st.armL.rotation.x = 0; st.armR.rotation.x = 0; }
+  }
+
+  // 满蓄力发光脉冲
+  setEmit3D(st, cr >= 1 ? 0.35 + 0.4 * (0.5 + 0.5 * Math.sin(nowT * 14)) : 0);
+
+  // 支援迷你小人（与2D同款环绕公式）
+  for (var m = 0; m < 3; m++) {
+    var mg = st.minis[m];
+    if (m < f.support) {
+      mg.grp.visible = true;
+      var sa = nowT * 1.4 + m * (Math.PI * 2 / Math.max(1, f.support));
+      var gpm = pxToGround(f.x + Math.cos(sa) * (CFG.towerR + 13), f.y + Math.sin(sa) * (CFG.towerR + 13));
+      mg.grp.position.set(gpm.x, 0, gpm.z);
+      mg.grp.rotation.y = sa;
+      mg.body.position.y = Math.abs(Math.sin(nowT * 8 + m)) * 1.5;
+      mg.armR.rotation.x = Math.sin(nowT * 6 + m) * 0.5;
+      mg.legL.rotation.x = Math.sin(nowT * 8 + m) * 0.35;
+      mg.legR.rotation.x = -Math.sin(nowT * 8 + m) * 0.35;
+    } else mg.grp.visible = false;
+  }
+}
+
+function setEmit3D(st, v) {
+  if (v > 0) st.mBody.emissive.copy(st.col).multiplyScalar(v);
+  else st.mBody.emissive.setRGB(0, 0, 0);
+}
+function hideMinis3D(st) {
+  for (var m = 0; m < st.minis.length; m++) st.minis[m].grp.visible = false;
+}
+
+/* 版图纹理烘焙：把2D版图（底色+中央+轨道环+装饰）画进离屏canvas供3D地面使用 */
+function bakeBoardTexture() {
+  var th = BOARD_THEMES[curTheme];
+  var oc = document.createElement('canvas');
+  oc.width = W * 2; oc.height = H * 2;   // 2倍分辨率烘焙：第一人称近景地面/画中画不发虚
+  var saved = ctx;
+  ctx = oc.getContext('2d');
+  ctx.setTransform(2, 0, 0, 2, 0, 0);    // 绘制函数仍按 960×640 坐标书写
+  try {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, th.bg); g.addColorStop(1, th.bg2);
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    drawCenter(th); drawRings(th); drawDeco(th);
+  } finally { ctx = saved; }
+  return new THREE.CanvasTexture(oc);
+}
+
+/* 画中画自身标记：跟随玩家小人 */
+function updatePipMarker() {
+  var mk = r3d.pipMk, pf = factions[0], st = r3d.figs[0];
+  if (!mk) return;
+  if (pf && pf.alive && st && started && !gameOver && (st.grp.visible || fpOn())) {
+    mk.visible = true;
+    mk.position.set(st.grp.position.x, 108, st.grp.position.z);
+    mk.rotation.y = st.grp.rotation.y;
+  } else mk.visible = false;
+}
+
+/* ===== 弹道与特效 3D 镜像层：2D模拟（spears/particles/rings/spots）仍是唯一权威，
+   这里只做池化渲染；USE3D=false 或结算时 draw() 自动恢复2D绘制 ===== */
+
+/* 颜色串（#hex / rgba() / 名称）→ THREE.Color */
+function fxCol(dst, str) {
+  if (!str) return dst;
+  var s = String(str);
+  if (s.charAt(0) === '#') return dst.set(s);
+  var m = /rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\)/.exec(s);
+  if (m) { dst.setRGB(+m[1] / 255, +m[2] / 255, +m[3] / 255); return dst; }
+  return dst.set(s);
+}
+
+/* 建池：标枪48 / 粒子maxParticles实例方块 / 冲击环 / 地面印记（均挂layer0：三相机可见） */
+function buildFx3D() {
+  var i;
+  var scene = r3d.scene;
+  // 标枪：枪杆沿+z（lookAt令+z指向飞行方向），锥尖在+z端
+  r3d.spearP = [];
+  for (i = 0; i < 48; i++) {
+    var g = new THREE.Group();
+    var ms = new THREE.MeshStandardMaterial({ color: 0x333333, roughness: 0.3, metalness: 0 });
+    var mt = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.3, metalness: 0 });
+    g.add(new THREE.Mesh(new THREE.BoxGeometry(2, 2, 56), ms));
+    var tip = new THREE.Mesh(new THREE.ConeGeometry(3, 10, 4), mt);
+    tip.rotation.x = Math.PI / 2; tip.position.z = 32;   // 锥尖朝+z
+    g.add(tip);
+    var tail = new THREE.Mesh(new THREE.BoxGeometry(3.4, 3.4, 5), mt);
+    tail.position.z = -28;
+    g.add(tail);
+    g.visible = false; g.frustumCulled = false;
+    scene.add(g);
+    r3d.spearP.push({ grp: g, ms: ms, mt: mt, ref: null });
+  }
+  // 粒子：实例化小方块（LEGO风），scale-fade + 每实例颜色
+  var pm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+    new THREE.MeshBasicMaterial({ color: 0xffffff }), CFG.maxParticles);
+  pm.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  pm.frustumCulled = false;
+  pm.count = 0;
+  scene.add(pm);
+  r3d.partP = { mesh: pm };
+  // 冲击环：贴地圆环
+  r3d.ringP = [];
+  var ringGeo = new THREE.RingGeometry(0.8, 1, 28);
+  for (i = 0; i < CFG.maxRings; i++) {
+    var rm = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.7,
+      side: THREE.DoubleSide, depthWrite: false }));
+    rm.rotation.x = -Math.PI / 2;
+    rm.visible = false; rm.frustumCulled = false;
+    scene.add(rm);
+    r3d.ringP.push(rm);
+  }
+  // 地面印记：贴地圆片
+  r3d.spotP = [];
+  var spotGeo = new THREE.CircleGeometry(1, 18);
+  for (i = 0; i < CFG.maxSpots; i++) {
+    var sm = new THREE.Mesh(spotGeo, new THREE.MeshBasicMaterial({
+      color: 0xffffff, transparent: true, opacity: 0.85,
+      side: THREE.DoubleSide, depthWrite: false }));
+    sm.rotation.x = -Math.PI / 2;
+    sm.visible = false; sm.frustumCulled = false;
+    scene.add(sm);
+    r3d.spotP.push(sm);
+  }
+}
+
+/* 每帧把2D模拟镜像成3D网格（由 draw3D 调用；模拟推进仍在 update() 里） */
+function updateFx3D(dt) {
+  if (!r3d || !r3d.fx) return;
+  var fx = r3d.fx, i, n;
+  var w2p = r3d.w2p || 1;
+  // --- 标枪：位置=平面坐标+抛物线高度，姿态=lookAt(速度方向含dh/dt俯仰) ---
+  var sp = r3d.spearP;
+  n = Math.min(spears.length, sp.length);
+  for (i = 0; i < n; i++) {
+    var a = spears[i], e = sp[i];
+    if (e.ref !== a) {   // 新标枪：换色（皮肤只作用于玩家枪）
+      var hasSkin = (a.skinId !== null && a.skinId !== undefined);
+      var sk = hasSkin ? skinById(a.skinId) : null;
+      fxCol(e.ms.color, sk ? sk.body : a.color);
+      fxCol(e.mt.color, sk ? sk.tip : '#ffffff');
+      e.ref = a;
+    }
+    // 直线弹道：水平沿2D权威轨迹反投影（直线保持），高度=手部→落点线性插值
+    if (a.wx0 === undefined || a.wx0 === null) spearLine3D(a);   // 惰性：世界起/落点
+    var h = (a.h === undefined ? 46 : a.h);
+    var gSm = pxToGround(a.x, a.y);        // 2D权威轨迹点 → 地面（必在手→落点直线上）
+    fx.p.set(gSm.x, h, gSm.z);
+    e.grp.position.copy(fx.p);
+    // 姿态：恒指向目标落点（俯仰角全程不变 → 绝对直线）
+    fx.v.set(a.lx - gSm.x, -h, a.lz - gSm.z);
+    var vl = Math.sqrt(fx.v.x * fx.v.x + fx.v.y * fx.v.y + fx.v.z * fx.v.z) || 1;
+    fx.v.multiplyScalar(1 / vl);
+    e.grp.lookAt(fx.p.x + fx.v.x, fx.p.y + fx.v.y, fx.p.z + fx.v.z);
+    e.grp.visible = true;
+  }
+  for (i = n; i < sp.length; i++) { sp[i].grp.visible = false; sp[i].ref = null; }
+  // --- 粒子：实例方块，life比例缩放（scale-fade），颜色逐实例写入 ---
+  var pm = r3d.partP.mesh;
+  n = Math.min(particles.length, CFG.maxParticles);
+  for (i = 0; i < n; i++) {
+    var pt = particles[i];
+    var fade = clamp(pt.life / pt.max, 0, 1);
+    var sc = Math.max(0.02, pt.size * 2 * w2p * (0.35 + 0.65 * fade));
+    var gpP = pxToGround(pt.x, pt.y);
+    fx.p.set(gpP.x, pt.h, gpP.z);
+    fx.s.set(sc, sc, sc);
+    fx.m.compose(fx.p, fx.q, fx.s);
+    pm.setMatrixAt(i, fx.m);
+    fxCol(fx.c, pt.color);
+    pm.setColorAt(i, fx.c);
+  }
+  pm.count = n;
+  pm.instanceMatrix.needsUpdate = true;
+  if (pm.instanceColor) pm.instanceColor.needsUpdate = true;
+  // --- 冲击环：贴地扩张 ---
+  var rp = r3d.ringP;
+  n = Math.min(rings.length, rp.length);
+  for (i = 0; i < n; i++) {
+    var rg = rings[i], rm = rp[i];
+    var rw = Math.max(0.1, rg.r * w2p);
+    var gpR = pxToGround(rg.x, rg.y);
+    rm.position.set(gpR.x, 0.8, gpR.z);
+    rm.scale.set(rw, rw, 1);
+    rm.material.opacity = clamp(rg.life / rg.max, 0, 1) * 0.7;
+    fxCol(rm.material.color, rg.color);
+    rm.visible = true;
+  }
+  for (i = n; i < rp.length; i++) rp[i].visible = false;
+  // --- 地面印记：按2D形态给贴地半径 ---
+  var srad = { ink: 11, frost: 9, ember: 6, sprout: 7 };
+  var sq = r3d.spotP;
+  n = Math.min(spots.length, sq.length);
+  for (i = 0; i < n; i++) {
+    var s = spots[i], sm = sq[i];
+    var sr = Math.max(0.1, (srad[s.kind] || 4) * w2p);
+    var gpS2 = pxToGround(s.x, s.y);
+    sm.position.set(gpS2.x, 0.5, gpS2.z);
+    sm.scale.set(sr, sr, 1);
+    sm.material.opacity = clamp(s.life / s.max, 0, 1) * 0.85;
+    fxCol(sm.material.color, s.color || '#9aa0aa');
+    sm.visible = true;
+  }
+  for (i = n; i < sq.length; i++) sq[i].visible = false;
+}
+
+/* 回血道具3D模型：黄色亮边电池外框 + 内嵌闪电，总高≈乐高小人1/3（24+2.7=26.7，小人80） */
+function buildHealItem3D() {
+  var g = new THREE.Group();
+  var mEdge = new THREE.MeshStandardMaterial({ color: 0xffe14d, emissive: 0xffc400, emissiveIntensity: 0.9, roughness: 0.3, metalness: 0.1 });
+  var mBack = new THREE.MeshStandardMaterial({ color: 0x232833, roughness: 0.55, metalness: 0 });
+  var mBolt = new THREE.MeshStandardMaterial({ color: 0xfff6a0, emissive: 0xffe95c, emissiveIntensity: 1, roughness: 0.25 });
+  var bw = 18, bh = 24, bd = 7, bar = 3.2;
+  function bx(w, h, d, mat, x, y, z) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z);
+    g.add(m);
+    return m;
+  }
+  bx(bw, bar, bd, mEdge, 0, bh / 2 - bar / 2, 0);        // 外框：上/下/左/右亮边
+  bx(bw, bar, bd, mEdge, 0, -bh / 2 + bar / 2, 0);
+  bx(bar, bh, bd, mEdge, -bw / 2 + bar / 2, 0, 0);
+  bx(bar, bh, bd, mEdge, bw / 2 - bar / 2, 0, 0);
+  bx(7, 2.7, 4.4, mEdge, 0, bh / 2 + 1.35, 0);           // 顶部正极凸头（总高26.7）
+  bx(bw - 2 * bar, bh - 2 * bar, 1.4, mBack, 0, 0, -bd / 2 + 1.2);   // 暗色内衬
+  var bs = new THREE.Shape();                             // 闪电轮廓（挤出成型）
+  bs.moveTo(0.1, 0.5);
+  bs.lineTo(-0.25, -0.05);
+  bs.lineTo(0, -0.05);
+  bs.lineTo(-0.1, -0.5);
+  bs.lineTo(0.25, 0.05);
+  bs.lineTo(0, 0.05);
+  bs.closePath();
+  var boltGeo = new THREE.ExtrudeGeometry(bs, { depth: 1.6, bevelEnabled: false });
+  boltGeo.center();
+  var bolt = new THREE.Mesh(boltGeo, mBolt);
+  bolt.scale.set(15, 15, 1);
+  bolt.position.set(0, 0, 0.6);
+  g.add(bolt);
+  return g;
+}
+/* 回血道具3D镜像：按2D权威数据增删（拾取即消失），自旋+悬浮 */
+function updateHealItems3D(dt) {
+  if (!r3d) return;
+  if (!r3d.healMap) r3d.healMap = {};
+  var map = r3d.healMap, i, k, it, m, has;
+  for (k in map) {                       // 已拾取 / 新对局重置 → 移除残留镜像
+    if (!map.hasOwnProperty(k)) continue;
+    has = false;
+    for (i = 0; i < healItems.length; i++) { if (String(healItems[i].uid) === k) { has = true; break; } }
+    if (!has) { r3d.scene.remove(map[k]); delete map[k]; }
+  }
+  for (i = 0; i < healItems.length; i++) {
+    it = healItems[i];
+    m = map[it.uid];
+    if (!m) { m = buildHealItem3D(); map[it.uid] = m; r3d.scene.add(m); }
+    var gp = pxToGround(it.x, it.y);
+    m.position.set(gp.x, 14 + Math.sin(nowT * 3 + it.uid) * 2, gp.z);
+    m.rotation.y += dt * 1.8;
+  }
+}
+
+/* 大力丸3D模型：黑色哑光金属球 + 金色丹纹环 + 金座。
+   底部占地宽16.5（乐高人仔躯干22的75%），总高26.7（与回血电池一致） */
+function buildPowerItem3D() {
+  var g = new THREE.Group();
+  var mBlack = new THREE.MeshStandardMaterial({ color: 0x141414, metalness: 0.85, roughness: 0.45 });  // 光滑金属带哑光
+  var mGold = new THREE.MeshStandardMaterial({ color: 0xd8a33f, metalness: 0.9, roughness: 0.3, emissive: 0x4a3310, emissiveIntensity: 0.4 });
+  // 金座：底面直径16.5（75%×22），向上收窄，高10.2
+  var base = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 8.25, 10.2, 24), mGold);
+  base.position.y = 5.1;
+  g.add(base);
+  // 黑球：直径16.5，坐在金座顶（球心17.95，球顶26.2）
+  var orb = new THREE.Mesh(new THREE.SphereGeometry(8.25, 32, 24), mBlack);
+  orb.position.y = 17.95;
+  g.add(orb);
+  // 金色丹纹：赤道金环 + 两道互垂立环（单轴旋转，立环顶=17.95+8.75=26.7，与电池同高）
+  var ringA = new THREE.Mesh(new THREE.TorusGeometry(8.25, 0.5, 8, 44), mGold);   // 赤道环（纬线）
+  ringA.position.y = 17.95;
+  ringA.rotation.x = Math.PI / 2;
+  g.add(ringA);
+  var ringB = new THREE.Mesh(new THREE.TorusGeometry(8.25, 0.5, 8, 44), mGold);   // 立环1（经线，XY面）
+  ringB.position.y = 17.95;
+  g.add(ringB);
+  var ringC = new THREE.Mesh(new THREE.TorusGeometry(8.25, 0.5, 8, 44), mGold);   // 立环2（经线，YZ面，与1互垂）
+  ringC.position.y = 17.95;
+  ringC.rotation.y = Math.PI / 2;
+  g.add(ringC);
+  return g;
+}
+
+/* 大力丸3D镜像：按2D权威数据增删（拾取即消失），自旋+悬浮（与电池同节奏） */
+function updatePowerItems3D(dt) {
+  if (!r3d) return;
+  if (!r3d.powerMap) r3d.powerMap = {};
+  var map = r3d.powerMap, i, k, it, m, has;
+  for (k in map) {                       // 已拾取 / 新对局重置 → 移除残留镜像
+    if (!map.hasOwnProperty(k)) continue;
+    has = false;
+    for (i = 0; i < powerItems.length; i++) { if (String(powerItems[i].uid) === k) { has = true; break; } }
+    if (!has) { r3d.scene.remove(map[k]); delete map[k]; }
+  }
+  for (i = 0; i < powerItems.length; i++) {
+    it = powerItems[i];
+    m = map[it.uid];
+    if (!m) { m = buildPowerItem3D(); map[it.uid] = m; r3d.scene.add(m); }
+    var gp = pxToGround(it.x, it.y);
+    m.position.set(gp.x, 1.5 + Math.sin(nowT * 3 + it.uid) * 1.5, gp.z);
+    m.rotation.y += dt * 1.8;
+  }
+}
+
+function draw3D(dt) {
+  if (!r3d) return;
+  if (!USE3D) {
+    // 降级冷却中：隐藏3D层；到点自动重试恢复（GPU/上下文瞬时错误可自愈）
+    if (!r3dDown || Date.now() < r3dRetryT) { r3d.canvas.style.visibility = 'hidden'; return; }
+    r3dDown = false; r3dErrs = 0; USE3D = true;
+    r3d.canvas.style.display = '';
+    r3d.canvas.style.visibility = 'hidden';
+  }
+  if (r3dErrs > 10) { downgrade3D(); return; }
+  var vis = !!(started && !gameOver && factions.length > 0);
+  r3d.canvas.style.visibility = vis ? 'visible' : 'hidden';
+  if (!vis) return;
+  for (var i = 0; i < factions.length; i++) updateFig3D(factions[i], dt);
+  updateFPRig(dt);   // FP手臂/标枪姿态（甩枪计时也在此推进）
+  updateFx3D(dt);    // 弹道/粒子/冲击环/地面印记 3D 镜像
+  updateHealItems3D(dt);   // 回血道具 3D 镜像（电池+闪电模型）
+  updatePowerItems3D(dt);  // 大力丸 3D 镜像（黑球+金丹纹模型）
+  // 主题切换时重烘焙地面纹理
+  if (r3d.ground && r3d.boardTheme !== curTheme) {
+    r3d.ground.material.map.dispose();
+    r3d.ground.material.map = bakeBoardTexture();
+    r3d.ground.material.needsUpdate = true;
+    r3d.boardTheme = curTheme;
+  }
+  updatePipMarker();
+  var gl = r3d.renderer;
+  var th = BOARD_THEMES[curTheme];
+  var fpVis = fpOn();
+  if (fpVis) {
+    // 第一人称：不透明天空 + 远景雾（仅此渲染期间挂雾，画中画/俯视不受影响）
+    r3d.fpFog.color.set(th.bg);
+    r3d.scene.fog = r3d.fpFog;
+    gl.setClearColor(new THREE.Color(th.bg), 1);
+    gl.render(r3d.scene, r3d.fpCam);
+  } else {
+    // 主视图（俯视）：透明背景，露出下方2D版图与特效
+    r3d.scene.fog = null;
+    gl.setClearColor(0x000000, 0);
+    gl.render(r3d.scene, r3d.cam);
+  }
+  // 画中画：右上角全场俯视，不透明地面（同一场景第二遍渲染，scissor 限定视口）
+  // 清屏色用主题底色：地面梯形外的区域与版图底色融为一体，不显黑边
+  r3d.scene.fog = null;
+  var vy = H - PIP.y - PIP.h;   // UI顶左坐标 → WebGL底左坐标
+  gl.setClearColor(new THREE.Color(th.bg2), 1);
+  gl.setScissorTest(true);
+  gl.setViewport(PIP.x, vy, PIP.w, PIP.h);
+  gl.setScissor(PIP.x, vy, PIP.w, PIP.h);
+  gl.render(r3d.scene, r3d.pip);
+  gl.setScissorTest(false);
+  gl.setViewport(0, 0, W, H);
+  gl.setScissor(0, 0, W, H);
+  gl.setClearColor(0x000000, 0);
+}
+
+/* 四周城墙壁垒：半透明石墙 + 顶部城垛（方形垛齿），装饰性不阻挡判定/弹道 */
+function buildWallEdge3D(x1, z1, x2, z2, mat) {
+  var g = new THREE.Group();
+  var dx = x2 - x1, dz = z2 - z1;
+  var len = Math.sqrt(dx * dx + dz * dz);
+  g.position.set((x1 + x2) / 2, 0, (z1 + z2) / 2);
+  g.rotation.y = Math.atan2(-dz, dx);              // 局部+X 沿墙边方向
+  var wh = 56, wt = 14;                            // 墙高（小人80）/ 墙厚
+  var slab = new THREE.Mesh(new THREE.BoxGeometry(len, wh, wt), mat);
+  slab.position.y = wh / 2;
+  g.add(slab);
+  var n = Math.max(3, Math.round(len / 36));       // 城垛：等距垛齿
+  var step = len / n;
+  for (var i = 0; i < n; i++) {
+    var m = new THREE.Mesh(new THREE.BoxGeometry(step * 0.5, 13, wt), mat);
+    m.position.set(-len / 2 + step * (i + 0.5), wh + 6.5, 0);
+    g.add(m);
+  }
+  return g;
+}
+function buildWalls3D(c1, c2, c3, c4) {
+  var mat = new THREE.MeshStandardMaterial({
+    color: 0x9ba1a8, roughness: 0.9, metalness: 0,
+    transparent: true, opacity: 0.34,             // 半透明石墙
+    side: THREE.DoubleSide, depthWrite: false
+  });
+  var cx = (c1.x + c2.x + c3.x + c4.x) / 4, cz = (c1.z + c2.z + c3.z + c4.z) / 4;
+  var edges = [[c1, c2], [c3, c4], [c1, c3], [c2, c4]];
+  var grp = new THREE.Group();
+  for (var i = 0; i < edges.length; i++) {
+    var a = edges[i][0], b = edges[i][1];
+    var ox = (a.x + b.x) / 2 - cx, oz = (a.z + b.z) / 2 - cz;
+    var ol = Math.sqrt(ox * ox + oz * oz) || 1;
+    ox = ox / ol * 12; oz = oz / ol * 12;          // 沿外法线外扩12，压住版图边缘
+    grp.add(buildWallEdge3D(a.x + ox, a.z + oz, b.x + ox, b.z + oz, mat));
+  }
+  return grp;
+}
+
+function init3D() {
+  var cv = document.getElementById('game3d');
+  if (typeof THREE === 'undefined' || !cv) { if (cv) cv.style.display = 'none'; return false; }
+  try {
+    var renderer = new THREE.WebGLRenderer({ canvas: cv, alpha: true, antialias: true });
+    // WebGL上下文丢失（GPU重置/驱动抖动）→ 立即临时降级2D；恢复后自动回到3D
+    cv.addEventListener('webglcontextlost', function (ev) {
+      ev.preventDefault();
+      downgrade3D();
+    }, false);
+    cv.addEventListener('webglcontextrestored', function () {
+      r3dErrs = 0; r3dDown = false; r3dRetryT = 0; USE3D = true;
+    }, false);
+    renderer.setSize(W, H, false);
+    // 高清渲染：缓冲按设备像素比放大（抗锯齿已开），显示尺寸仍固定960×640 → 人物轮廓不发虚
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    cv.style.width = W + 'px';
+    cv.style.height = H + 'px';
+    renderer.setClearColor(0x000000, 0);
+    var scene = new THREE.Scene();
+    var cam = new THREE.PerspectiveCamera(46, W / H, 10, 4000);
+    cam.position.set(0, 660, 540);
+    cam.lookAt(0, 0, 0);
+    scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+    var key = new THREE.DirectionalLight(0xffffff, 0.85);
+    key.position.set(180, 420, 260); scene.add(key);
+    var rim = new THREE.DirectionalLight(0x99bbff, 0.35);
+    rim.position.set(-260, 300, -180); scene.add(rim);
+    r3d = { renderer: renderer, scene: scene, cam: cam, canvas: cv, figs: {} };
+    // 画中画：全场静态俯视正交相机（屏幕上方=主视图远处）
+    // 注意：必须先同步相机世界矩阵，否则 unproject 用的是单位矩阵，边界会算错
+    cam.updateMatrixWorld(true);
+    var c1 = pxToGround(0, 0), c2 = pxToGround(W, 0), c3 = pxToGround(0, H), c4 = pxToGround(W, H);
+    var minX = Math.min(c1.x, c2.x, c3.x, c4.x) - 60;
+    var maxX = Math.max(c1.x, c2.x, c3.x, c4.x) + 60;
+    var minZ = Math.min(c1.z, c2.z, c3.z, c4.z) - 60;
+    var maxZ = Math.max(c1.z, c2.z, c3.z, c4.z) + 60;
+    var pip = new THREE.OrthographicCamera(minX, maxX, -minZ, -maxZ, 10, 4000);
+    pip.position.set(0, 1600, 0);
+    pip.up.set(0, 0, -1);
+    pip.lookAt(0, 0, 0);
+    r3d.pip = pip;
+    // 版图世界包围盒（FP瞄准反投影钳制用，不含边距）
+    r3d.brd = {
+      minX: Math.min(c1.x, c2.x, c3.x, c4.x),
+      maxX: Math.max(c1.x, c2.x, c3.x, c4.x),
+      minZ: Math.min(c1.z, c2.z, c3.z, c4.z),
+      maxZ: Math.max(c1.z, c2.z, c3.z, c4.z)
+    };
+    // 第一人称相机：看地面(layer1)+小人(layer0)，不看画中画标记(layer2)
+    var fpCam = new THREE.PerspectiveCamera(62, W / H, 1, 4000);
+    fpCam.rotation.order = 'YXZ';
+    fpCam.position.set(0, FP_EYE, 0);
+    fpCam.layers.enable(1);
+    scene.add(fpCam);
+    r3d.fpCam = fpCam;
+    // FP远景雾：地面边缘融入天空色（仅FP主视图渲染期间挂到scene）
+    r3d.fpFog = new THREE.Fog(0x000000, 550, 2400);
+    // FP手臂+标枪 rig（fpCam子物体，layer3 仅FP相机可见）
+    buildFPRig();
+    // 3D地面：版图四角反投影的共面四边形，UV=屏幕版图矩形 → 透视下与2D版图对齐
+    // 仅挂在 layer1：主俯视相机不看它（仍显示2D版图），第一人称相机与画中画可见
+    var gGeo = new THREE.BufferGeometry();
+    gGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array([
+      c1.x, 0, c1.z,  c2.x, 0, c2.z,  c3.x, 0, c3.z,  c4.x, 0, c4.z
+    ]), 3));
+    gGeo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array([
+      0, 1,  1, 1,  0, 0,  1, 0
+    ]), 2));
+    gGeo.setIndex([0, 2, 1, 1, 2, 3]);
+    var gMat = new THREE.MeshBasicMaterial({ map: bakeBoardTexture(), side: THREE.DoubleSide });
+    var ground = new THREE.Mesh(gGeo, gMat);
+    ground.layers.set(1);
+    scene.add(ground);
+    pip.layers.enable(1);
+    // 四周城墙壁垒（半透明石墙+城垛，layer0：俯视/画中画/第一人称均可见）
+    r3d.walls = buildWalls3D(c1, c2, c3, c4);
+    scene.add(r3d.walls);
+    // 小窗自身标记：白色箭头悬浮在玩家头顶指示朝向（仅画中画 layer2 可见）
+    var pipMk = new THREE.Group();
+    var cone = new THREE.Mesh(new THREE.ConeGeometry(13, 28, 4),
+      new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    cone.rotation.x = Math.PI / 2;    // 锥尖朝 +Z（朝向由 group.rotation.y 决定）
+    cone.position.z = 6;
+    cone.layers.set(2);
+    pipMk.add(cone);
+    pipMk.visible = false;
+    pipMk.layers.set(2);
+    scene.add(pipMk);
+    pip.layers.enable(2);
+    // 屏幕1px ≈ 多少世界单位（版图中心采样；标枪/粒子/环尺寸换算用）
+    var w2a = pxToGround(480, 320), w2b = pxToGround(520, 320);
+    r3d.w2p = Math.hypot(w2b.x - w2a.x, w2b.z - w2a.z) / 40;
+    // 特效镜像层临时对象（放r3d内：three.js缺失时顶层引用会抛错）
+    r3d.fx = { v: new THREE.Vector3(), t: new THREE.Vector3(),
+               p: new THREE.Vector3(), s: new THREE.Vector3(),
+               q: new THREE.Quaternion(), m: new THREE.Matrix4(), c: new THREE.Color() };
+    buildFx3D();   // 标枪/粒子/冲击环/地面印记 3D 池
+    r3d.ground = ground;
+    r3d.pipMk = pipMk;
+    r3d.boardTheme = curTheme;
+    return true;
+  } catch (e) {
+    if (window.console && console.warn) console.warn('3D init failed, fallback to 2D:', e);
+    cv.style.display = 'none';
+    return false;
+  }
+}
+
+/* ============ 主循环 ============ */
+var lastTime = 0;
+function gameLoop(timestamp) {
+  var dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+  try {
+    update(dt);
+    draw();
+    drawUI();
+  } catch (err) {
+    // 防止单帧异常导致游戏循环永久中断（黑屏）
+    if (window.console && console.error) console.error('gameLoop error:', err);
+  }
+  // 3D层独立守护：任何3D异常都不能影响2D循环，连续失败自动永久降级
+  // 3D层独立守护：任何3D异常都不能影响2D循环，连续失败临时降级（冷却后自动恢复）
+  // 启动时3D未建成（WebGL瞬时不可用）→ 每4秒重试一次，最多5次
+  if (!r3d && r3dInitTries < 5 && Date.now() > r3dRetryT) {
+    r3dInitTries++;
+    r3dRetryT = Date.now() + 4000;
+    try { if (init3D()) { USE3D = true; r3dInitTries = 0; } } catch (e5) {}
+  }
+  try {
+    draw3D(dt);
+  } catch (err3) {
+    r3dErrs++;
+    if (r3dErrs <= 3 && window.console && console.error) console.error('draw3D error:', err3);
+    if (r3dErrs > 10) downgrade3D();
+  }
+  requestAnimationFrame(gameLoop);
+}
+
+curSkinObj = SPEAR_SKINS[curSkin];
+buildDeco();
+USE3D = init3D();
+showScreen('main');
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
